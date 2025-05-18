@@ -55,4 +55,22 @@ Related Studies
                 3: Our model introduces learnable curvature in positional embeddings, head-specific scaling in the attention mechanism, hyperbolic layer normalisation, gradient clipping, geodesic regularisation and layer scaling for training stability. These are specifc for Vision Transformers 
                 4: Our model extends the standard self-attention mechanism into hyperbolic space using mobius operations and hyperbolic distance calculations to allow usnto capture complex relationship in visual data more effectively 
 
-            
+Methodology
+    - Code Availability: Code is available at https://github.com/hyperbolicvit/hyperbolicvit
+
+    - Hyperbolic Geometry Preliminaries
+        > Hyperbolic space is chraracterised by constant negative curvature and it embeds hierarchical and complex structures common in visual data
+        > Poncare ball model is used due to its computational convenience and suitablility for representing image data structures
+        > Poincare ball model:
+            - The n-dimensional Poincare ball model is defined as the manifold:
+                D^n = {x in R | |x| < 1}, |.| is euclidean norm 
+            - The Riemannian metric tensor g_x of this manifold is given by:
+                g_x = (l_x)^2 g^E , with l_x = 2/( 1 - |x|^2 )
+                where g^E is the Euclidean metric tensor, and the l_xis the conformal factor that scales the Euclidean metric to account for the curvature of hyperbolic space
+        > Mobius Operations
+            - Mobius transformations is utilised to adapt Vision Transformer components to hyperbolic space
+            - These operations are essentual for processing vectors within the Poincare ball model
+            1: Mobius Addition
+                For vectors x,y in D^n, the mobius addition x + y is defined as 
+            2:Mobius Scalar Mulitplication 
+            3: Mobius Matrix-Vector Mulitplication
