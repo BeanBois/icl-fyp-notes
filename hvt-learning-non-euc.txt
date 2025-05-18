@@ -1,0 +1,58 @@
+HVT: A COMPREHENSIVE VISION FRAMEWORK FOR LEARNING IN NON-EUCLIDEAN SPACE
+
+Many real-world datasets (images) exhibit hierarchical structures better captured in non-euclidean spaces
+Images are inherently hierarchical, building from pixels, to edges, to shapes, to objects and finally to scene
+    This hierarchical nature reflects a tree-like structure 
+    > ViTs uses a patch-based approach to introduce a hierarchical representation 
+        - It does so as:
+            1: each patch captures local patterns like textures/edges
+            2: By attending over patches, the model aggregates local information to uinderstand the overall structure 
+    Hyperbolic spaces are well-suited for modelling hierarchical data due to their ability to embed tree-like structures with minimal distortion 
+        By using hyperbolic geometry and Mobius transformations, we can effectively capture the multi-scae dependencies inherent in visual data
+        Specifically, Mobius transofrmation allow for operations like addition and scalar multiplication in hyperbolic space, enabling neural netowrks to perform calculations wihle preserving hierarchical r/s 
+
+
+Related Studies 
+    - Hyperbolic Geometry in Machine Learning
+        > Nicker & Kiela sucessfully used Poincare embeddings to model hierichical data 
+        > This was further refined by Ganea 2018, who introduced hyperbolic emb for entailment cones, effectively capturing asymmetric r/s
+        > Khrulkov 2020, Liu 2020 extended these concepts to visual data and zero-shot recognition, respectively, underscoring the versatility of hyperbolic embeddings in handling complex visual tasks
+        > Ermolov (2022) developed Hyperbolic Vision Transformers that incorporate these embeddings within Vision Transformer architectures, enhancing metric learning.
+        > Our model extends on HVTR by incorporating hyperbolic geometry throughout the transformer operations, from Mobious transformations to hyperbolic self-attention
+
+    - Hyperbolic Nerual Network and attention
+        > Ganea 2018 formualted HNN by introducing layers and activation functions suited for hyperbolic spaces
+        > This was expanded by Bachmann 2020 who focues on optimising these networks efficiently 
+        > Our model enriches HNN by embedding hyperbolic layers directly within transformer architectures, enhancing adaptibility and depth of hyperbolic ops.
+        > Hyperbolic Attention Networks by Gulchehe 2018 is an alternative method from our model
+            - It differs primarily in how  hyperbolic geometry is applied within the attention mechanism
+            - HAN focuses on embedding te activations into hyperbolic space using both the hyperboloid and Klein models, leveraging hyperbolic matching and aggregation operations
+            - Our model incorporates learnable curvature within positional embeddings, head-specific scaling in attention, and hyperbolic layer normalization, offering more flexibility and efficiency in capturing hierarchical data 
+                > Our model also utilises Poincare ball model for its computation suitability in vision tasks
+    
+    - Vision Transformers 
+        > Dosovitskiy 2021b adapted Vision Transformer for visual tasks
+        > Enhancements by Caron 2021 and El-Nouby 2021 have refined ViTs for self-supervised learning 
+        > However these model are Euclidean-based, and our HVT employs hyperbolic geometry to model hierarchical and relational data structures more effectively 
+
+    - Comparison to Key Hyperbolic Methods
+        > Ermolov 2022 
+            - Their HVTs focuses on hyperbolic embeddings for metric learning, while our approach full integrates hyperbolic operations throughout the transformers 
+            - This significantly enhance its ability to manage hierarchical data beyond the objectives of metric learning
+            - We extend the application scope to include image calssification by embedding hyperbolic geometry directly into the core compents of the Vision Transformer
+        
+        > Yang 2024, Hypformer
+            - Hypformer is an efficient hyperbolic Transformer based on the Lorentz model of hyperbolic geometry
+            - Hypformer introduces 2 foundational blocks to define essential Transformer modules in hyperbolic space 
+                1: Hyperbolic transformation with Curvatures 
+                2: Hyperbolic Readjustments and Refinement with Curvatures 
+            - A linear self-attention mechanism in hyperbolic space is also developed to handle large-scale graph data and long-sequence inputs efficiently
+            - Our model differs in several key aspects: 
+                1: Our model focus on vision tasks (esp image classification), integrating hyperbolic geometry throughout the Vision Transformer architecture to enchance the modeling of hierarchical and relational structures inherent in visual data 
+                    > Hypformer is mainly designed for graph data and emphasises on scalability and efficiency in handling large-scale graphs and long sequences 
+                2: Our model utilises the Poincare ball model, which is advantageous for vision tasks for its conformal properties, which preserves angles and better represent geometric structure in image data
+                    > Hypformer operates in Lorentz model of hyperbolic geometry 
+                3: Our model introduces learnable curvature in positional embeddings, head-specific scaling in the attention mechanism, hyperbolic layer normalisation, gradient clipping, geodesic regularisation and layer scaling for training stability. These are specifc for Vision Transformers 
+                4: Our model extends the standard self-attention mechanism into hyperbolic space using mobius operations and hyperbolic distance calculations to allow usnto capture complex relationship in visual data more effectively 
+
+            

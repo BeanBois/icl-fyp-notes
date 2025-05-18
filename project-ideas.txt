@@ -1,0 +1,31 @@
+The first direction involves a better representation of graphs, and effectively a different attention mechanism. 
+    I am thinking of looking into a better way to represent the temporal relation between each local graphs, instead of layering them over one another and adding edges into them.  
+    A couple of things are capable of capturing temporal relationships
+        1) Spike Timing Dependent Plasticity 
+            - If we are able to 'feed' consec graphs into a SNN (firstly how will control work? we need a policy! what will be the output of the SNN?)
+            - Graphs also needs to be encoded s.t 'impt' (needs to be defined) features and relations are kept (to distinguish between graphs) (hilber transform maybe? but how will that work for a non-euclidean graph? )
+                - Should graphs be encoded? If so what are the important parts to encode? how do we know we have encoded it correctly?
+            - Following the current implementation, which frames the problem as a hetero graph generation problem, our SNN model should 'generate' the G^t+1 given G^t and context {}
+            - The question lies in what architecture will our SNN take? Ultimately this is a Supervised learning framework, making STDP very viable ( since we know what graphs follows after what graphs)
+            - Naively, we could have a grid like architecture that is fully connected at first, with random initial weights, question is how minute/precise should the grid be? (number of neurons? we could even start with 0 connections and 'build' it via training)
+                - then from the predicted graph, we can extract actions by measuring the displacement between the robotic nodes
+                - A more interesting question then lies, can STDP work with/encode context? Does there exist an edge whose weight is conditioned on the context (The answer may just be factor graphs? ) (made up of pseudo-demos in training and demos given in test time) given?
+            - Can diffusion be used within SNNs? probably so right? how will that work? 
+
+        2) Reservoir Computing
+            - Same qn lies here, how do we 'feed' consec graphs into a SNN ect ect
+
+    Furthermore, right now the graphical representation is done within Euclidean space. A better representation could be achieved in non-euclidean space
+
+
+ 
+The second direction concerns the instant policy, when the demonstrations are given during deployment/test time. 
+    As of now, a human is required to operate the robot to give demonstrations. 
+    I am thinking if it is possible to give the robot a visual demonstration 
+    (either in person or via a video recording), as this can make the instant policy more applicable and flexible. 
+
+
+
+Meeting notes:
+
+Back ground knwoledfge in general iL vs IN-context

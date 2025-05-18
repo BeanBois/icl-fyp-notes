@@ -1,0 +1,195 @@
+Firstly understand what the project is trying to do
+
+Paper Notes:
+
+Paper cites 2 primary challenges faced in ICL in language and vision
+
+	1) Given limited data, need appropriate inductive biases in observation and action representations for efficient learning in 3D space
+	2) Given inefficiency and labour cost of manual collectiong of robotics data, need a means to easily collect training data in a scalable way
+
+	First challenge is addressed by introducing novel graph-based representation that integrates demonstartions, current point cloud observations, and the robot's actions within a unified graph space
+		Then In-Context Imitation Learning becomes a diffusion-based graph generation problem, enabling demonstartions and observations to be interpreted effectively in order to predict the robot's actions
+
+	2nd challenged addressed, we get the model's weight to encode a more general, task-agnostic ability to interpret and act upon the given context.	This is unlike traditional BC, which model weights encode policies for a specific set of tasks
+	
+		By doing this, model can be trained on pseudo-demonstrations (set of demos for semantically consistent tasks)
+
+Results:
+	IP can learn vairous everyday tasks, whilst achieving higher task success rates than SOTA baselines trained on the same data
+	IP is also able to genearlise to object geometries unseen from the test-time demos
+	Performance improves as more data is generated and used for simultaneous training 
+	IP achieves cross embodiment transfer from human-hand demos to robot policies
+	IP achieves zero-shot transfer to language-defined tasks without needing large language-annotated datasets
+
+Contributions
+	1) cast ICL as diffusion-based graph generation problem
+	2) Show that model can be trained using procedurally generated pseudo-demos
+	3) Evaluate in sim and RL across various everyday tasks
+
+Related Works:
+
+	1) In-Context Learning:
+		Allows models to adapt to new tasks using a small number of examples, without requiring explicit weight updates/retraining
+		ICL has been applied to enable robots to rapidly adapt to new tasks by using 
+			- foundation models, 
+			- finding consisttent object alignments, 
+			- identifying invariant regions of the state space 
+			- directly training policies aimed at task generalisation
+			- Cross embodiment transfer 
+		However challenges remains in achieving generalisation to tasks unseen during training and novel object geometries 
+			- In a sense, no creativity, or more so no meta-knowledge or planner that is able to utilise current knowledge/policies to generate new knowledge/policies
+
+		IP currently addresses this by leveraging simulated pseudo-demos to generate abundant and diverse data, while its structured graph representation ensures that this data is utilised efficiently 
+			- is there a way to make it more general, such that it can be done in test-time (like deliberation) efficiently
+			- Instead of making pseudo-demos in training time, we do a n-shot task-specific pseudo demo, and have a general model learn on it. With this, although inference time increases, training becomes more efficient, and policy is more task-specific.
+			- The load 'off' training could be better used to develop a more general AI model. Right now, model achieves generality in object geometries and task by doing pseudo demos of diverse objects on diverse task. If we 'tune' the task-specific obj geometry during inference time, and opt to use a general object during training time for pseudo demos, our AI model can focus on achieving task generality, assuming that the nature of the task is not object specific? The biggest question underlying this is whether the task is related to obj gemoetry. I believe this is not the case (majority of the time, links to the super hand project). This assumption also overcomes the unpredictability of object geometry during test time. 
+			- Perhaps some sort of entropic measure can be used to determine if a pseudo-demo is needed during inference time. This combines the current approach of having the model be generic to task and obj gemoetry. During inference time, say if entropic measure is too high, we rollout pseudo demos to retrain the model such that it adapts to the current obj geometry
+
+	* A lot of the above points still doesnt make sense. Firstly, what does it mean to rollout and retrain during test time (cont learning)?
+	* Secondly, how will the inner model be structured? Its a good idea but more thought needs to be put into it. 
+	* I believe that Generative Adversarial IL might work for object geometries for empowerment measures? not sure about this one
+
+
+	2)Diffusion Models
+		Has the ability to iteratively refine randomnly sampled noise through a learned denoising process, ultimately generating high-quality samples from the underlying distribution.
+		Utiliseed to create:
+			1) Image augmentations to help robots adapt to diverse environments
+			2) generating 'imagined' goals/subgoals for guidiung policies
+			3) learning precise control policies
+		This work proposes the use of diffusion models for graph generationg, enabling structured learning of complex distributions
+		- The good thing here is we are using hetero graphs, which provides flexibility. If we do some clustering algo to 'categorise' the point cloud obserfvations to the respective objects, it migh result in more consistent representation across task. Perspective/Orientation invariances might emerge if task representation during pseudo-demos remains task-specific.
+
+
+	3) GNNs
+		GNNs have been used in robotics to:
+			- obtain RL policies
+			- Learn affordance models for skill transfer
+		This project builds on top of these applications by studying structured graph representations for ICIL, enabling learning of the relationship between demos, obs and actions
+
+
+Overview of Problem:
+	Goal: Robot to complete a novel task immediately after the provided demos. 
+		- During test time,  >=1 demos given to define the context
+		- The context defined is then used by the trained IP network with the current point-cloud observation to infer actions suitable for closed-loop reactive control
+		- Enables instasntaneous policy acquisition w/o extensive real-world data collection or training.
+
+	Achieved through
+		- Structured graph representation
+		- a learned diffusion process
+		- An abundant source of diverse simulated pseudo-demos	
+
+Problem Formulation:
+	Robot actions a has 2 parts:
+		- End-effector displacement SE(3) (when time scled, corr to velocities)
+		- Binaryn open-closed commands for gripper	   
+
+	Observation at timestep t has 3 parts
+		- Segmented point clouds P
+		- current end-effector pose in the world frame W SE(3)
+		- Binary gripper stsate 
+
+	Goal is to find a probability distribution, prob of taking action from time t to t+T, given current observation and N pseudo-demos of length L. 
+
+	* Demo during test time defines the task (or context C). These demo are unlike pseudo-demos which are used during training time
+
+
+Graph Representation:
+	Aim is to cpature key elements of the problem and introduce appropriate inductive biases.
+	Uses hetero-graph that jointly expresses context, current obs, and future actions (capturing complex r/s beteween robot & env; and ensure that relevant info is aggregated and propagated in a meaningful manner)
+		- Each graph consist of 2 types of nodes, (robot state, local geometries of objects)
+		- Each graph can be thought of as a snapshot of the current observation, and demos are graphs 'stitched together'
+
+	> Local Representation
+		Observation at time step t is expressed as a local graph, consisting of the current Point Cloud and current end-effector pose in the world frame and gripper state
+			Then M points from the current Point Cloud is sampled using the Furthest Point Sampling Algorithm
+			Points are then used to encode local geometries around them using Set Abstraction layers
+			Feature vectors and positions are obtained from current point cloud -- {F,P}M = phi(P) 
+				* phi(P) is separately pre-trained as an implicit occupancy network, ensuring that {F,p} describes local geometries
+			Gripper state is then represented in the same format {F_g,p_g}6 by 
+				1) rigdly transforming key points (p_kg) on the end-effector p_g = T x p_kp.
+				2) assigning embeddings to p_g that encode node distinctions and gripper state information F_g = [f, phi_g(s_g)]
+		Finally, scene and gripper nodes are linked with directional edges
+			Each edge is assigned edge attribute e that represents relative positions in Cartesian space
+			*Each edge e_ij = sin(2^0 * pi * (p_j-p_i), cos(2^0 * pi * (p_j - p_i) ... sin(2^(D-1) ... , cos(2^(D-1)...)
+	
+	> Context Representation
+		As mentioned, a sequence of graphs, interleaved with actions, defines a trajectory within context C. 
+		Interleaving is done by 
+			1. linking gripper nodes across time to represent their relative movement 
+			2. Connecting all demos gripper nodes to the current ones to propagate relevant info (why?)
+		This enables the graph to efficiently handle any number of demos, regardless of length; whilst ensuring that the number of edges grows linearly
+		This results in context, G_c(G_curr, {G_demo}), enabling a structured flow of information between context and curr obs.
+
+	> Action Representation
+		To express future actions a = (T,a_g) within the graph representation, a local graph is constructed as if the actions were executed and the gripper moved: G_a_l(P, T_WE x T_ea, a_g)
+		This allows 'imagining' spatial implications of actions
+		* Effectively, actions are fully described within positions and features of the nodes of local graphs
+		To represent actions as relative movements from the current gripper pose, edges are added between current and future gripper nodes with position-based embeddings that represent relative movement between subsequent timesteps
+			* These edges propagate information from the context and the current observation; and propagates it to nodes representing the actions, enabling effective reasoning about the robot actions by ensuring the observations and actions are expressed in the same graph space
+
+
+Learning Robot Action via Graph Diffusion
+	To utilised graph representation effectively, ICIL can be framed as a graph generation problem
+	The aim is to learn a distribution over previously described graphs using a diffusion model
+	Approach involves forward and backward Markov-chain processes, where graph is altered and reconstructed in each phase.
+	At test time, the model iteratively updates only the parts of the graph representing robot actions
+		*This implicitly models the desired conditional action probability	
+	
+	> TRAINING
+		Training includes 2 processes: 
+			1) Forward process where noise is iteratively added to the samples extracted from the underlying data distribution 
+				Noise altered graph is constructed by adding noise to the robot actions 
+			* Could consider using hyper graph like in Robotics SLAM, where 'space' or hyperedges represents uncertainty?
+				* Variance schedule controls how noise is added throughout the diffusion steps
+					** Higher b_k = more noise introduce
+					** b_k usually starts small and increases over time, allowing for a gradual transition from the og data distribution to a complete noise distribution
+					** factor sqrt(b_k) applied to prev actions ensures that the expected value of the distribution remains consistent, preventing a diverging diffusion process
+					** b_k (or its growth) can be tuned to control how quickly the diffusion process transforms the og graph ot noisy one
+			2) Reverse Process, where the aim is to reconstruct the original data sample from its noise-altered state, utilizing a parameterized model p(G^k-1 | G^k)
+				Intuitively, model needs to learn how the gripper nodes representing the robot actions should be adjusted, st the whole graph moves closer to the true data distribution q(G))	
+				Formally the de-noising process is G^k-1 = G(G^a_l(.) + N(0,VI), G_c)
+				Within the G^a_l(.), . = alpha (a^k - rho e(G^k,k))
+				e(G^k,k) can be interpreted as effectively predicting the gradient field, based on which single noisy gradient descent step is taken
+					* Since actions is represented as collections of nodes with their assoc positions p and features, which in turn depend on the binary gripper actions, the gradient field e(.) has 2 components : e = [dp, da_g]
+					da_g can be used directly in the diffusion process.
+					A set of dp predictions is an over-parameterisation of a gradient direction on the SE(3) manifold that requires additional steps to compute a precise denoising update
+						However this can result in a large translation dominating a small rotation (and v.v), preventing precise learning for both components
+						To address this, denoising direction is represented as a combination of centre-of-mass movement and rotation around it
+						Effectively, this decouples the translation and rotation predictions, while keeping computation within Cartesian space 
+							[dp_t, dp_r] = [t^0 - t^k, R^0 x p_kp - R6k x p_kp], with dp = dp_t + dp_r representing the flow
+						e(.) is then learnt by making per-node predictions (e^k in R^7) and optimiseing the variational lower bound of the data likelihood, which is equivalent to minimising MSE in e(.)
+				As our parameterized model, a hetero graph transformer is used to update features of each node in the graph, F_i as 
+					F'_i = W1 F_i + sum( att_ij (W2 Fj + W5 e_ij) )
+					att_ij = softmax( (W3 F_i) (W4 F_j + W5 e_ij)/sqrt(d) )
+					Here W_i represents learnable weights
+					Using this attention mechanism allows for selective and informative information aggregation which is propagated through the graph in a meaningful way, while ensuring that memory and computational complexity scales linearly with increasing context length (N & L) 
+					* Could use attractor to better 'represent' attention mechanism so that relevant information is being 'focused'
+					More in appendix C
+
+	> Deployment
+		During test time, graph representation is created using action sampled from normal dist. and context, which is inferred from current observation and demos given
+		Predictions on how gripper nodes should be adjusted is then made
+		These predictions are then used to update the positions of these gripper nodes by taking a denoising step according to Denoising Diffusion Implicit Model:
+			p^k-1_g = sqrt(a_k-1)p'^0_g + sqrt( (1-a_k-1)/(1-a_k) ) (p^k_g - sqrt(a_k)p'^0_g)
+			* p'^0_g = p^k_g + dp_t + dp_r
+			* p^(k-1)_g and p^k_g implicitly represents gripper poses at denoising time steps k-1 and k.
+				** Since we know ground truth values of these sets of points (since we collect them), we can extract an SE(3) transformation that would align them using a SVD.
+				T_(k-1),k = argmin(T_(k-1),k in SE(3)) | p^(k-1) - T_(k-1),k x p^k |^2
+		Finally a^(k-1) is calcualted from a^k by transforming it to T_(k-1,k)
+
+
+Infinite Pool of Data
+	- Since the IC policy is not task specific, we require demos that are task-arbitary by nature.
+	- These demos/data only need to account for consistency in the physics involve within the tasks, or more so the semantics
+	- Data Generation:
+		> Env is populated with obejcts from Shape Net
+		> Pseudo-task are generated by randomnly sampling object-centric waypoints near or on the object
+		> Pseudo-task are then performed with virtual movements, and occasionnal simulated gripping of the object is done by attaching objects to gripper
+		> Orientation of objects and gripper is also randomised to generate more demos (the point of it all is the consistent semantics we want!)
+
+	- Data Usage:
+		> During training, we sample N pseudo-demos for a given pseudo-task, using N-1 to define the context, while the model learns to predict actions for the Nth
+		> Although pseudo-demos are primary training data, additional data sources can be integrated in the same format. allowing the model to adapt to specific settings or handler noisier env/obs
+		
+
+		

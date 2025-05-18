@@ -1,0 +1,8 @@
+15 May
+
+Right now i am trying to work on the graph representation for the point cloud observations
+
+To me, there are a couple of steps to achieve good graphical representations
+
+Firstly, using multiple images from different angles, we try to 'box in' on the dimensions of the object
+    The first approach is to do it from a 2D perspective, 
