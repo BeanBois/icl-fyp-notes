@@ -190,6 +190,30 @@ Infinite Pool of Data
 	- Data Usage:
 		> During training, we sample N pseudo-demos for a given pseudo-task, using N-1 to define the context, while the model learns to predict actions for the Nth
 		> Although pseudo-demos are primary training data, additional data sources can be integrated in the same format. allowing the model to adapt to specific settings or handler noisier env/obs
-		
 
-		
+
+Geometry Encoder 
+	- This geometry encoder is used to identify which point cloud belongs to which objet's surface
+	- It is used to represent observation of the environment as a aset of nodes
+	- Formally, it encodes the dense point cloud into a set of feature vectors together with their associated positions as {F^i, p^i}i, i=[0,M], where M is the number of point cloud
+		> Each feature Fi describes the local geometry around point p^i
+		> This is ensured using a pre-trained occupancy network that consist of an encoder phi_e, that embeds local point clouds and a decoder psi_d which given an embedding and a query point is tasked to determine whether the query lays on the surface of the object 
+			- psi_d( phi_e(P), q ) -> [0,1]
+			- each local embedding is used to reconstruct only a part of the object, reducing the complexity of the problem and allowing it to generalise more easily.
+	- We parameterized phi_e as a network composed of 2 Set Abstraction layers enhanced wth Nerf-like sine/cosine embeddings
+		> It samples M centroids from the dense point cloud and embdeds the local geometries around them into feature vectors of size 512 
+		> we express the positions of points as (sin(2^i pi (p_j - p_i)), cos( 2^i pi (p_j - p_i)) ...), i = [0:9], enabling the odel t cature high-frequency changes in position of the dense points and capture the local geometry more precisely 
+	- psi_d is parameterized as an eight-layer MLP with residual connections, that uses the same Nerf-like embeddings to represent the position of the query point
+	- When training instsant policy, we dont use the decoder and keep the encoder frozen
+
+
+Training 
+	- Training can be intuitively understood as a forward and backwawrd Markov chain diffusion process, where noise is added to the ground truth robot actions in the forward pass, and noise is removed from the graph space in the backward pass
+	- Practically, training has 4 steps:
+		1: Noise is added to the ground truth actions 
+			> To add noise the the action expressed as (T_ea in Lie group SE(3), a_g in R), we first project T_ea to se(3) using a Logmap.
+			> the result vectors are then normalised, with noise added to in as described in 
+		2: Noisy actions are used to construct our graph representation 
+		3: network preducts how nodes representing robot actions need to be adjusted to effectively remove the added noise 
+		4: the prediction and ground truth labels are used to calculate the loss function, and weights are updated accordingly
+
