@@ -212,8 +212,106 @@ Training
 	- Practically, training has 4 steps:
 		1: Noise is added to the ground truth actions 
 			> To add noise the the action expressed as (T_ea in Lie group SE(3), a_g in R), we first project T_ea to se(3) using a Logmap.
-			> the result vectors are then normalised, with noise added to in as described in 
+			> the result vectors are then normalised, with noise added to in as described in denosiing diffusion paper 
+			> this is then un-normalised to extract the noisy end-effector transformation T^k_EA using Expmap 
+
 		2: Noisy actions are used to construct our graph representation 
 		3: network preducts how nodes representing robot actions need to be adjusted to effectively remove the added noise 
 		4: the prediction and ground truth labels are used to calculate the loss function, and weights are updated accordingly
 
+
+Network architecture
+	- The Neural Network takes in as input the constructed graph representation, and predicts the gradient field for each gripper node representing the actions
+	- These predictions are then used in the diffusion process allowing to iteratively update the grpah and ultimately extract the desired low-level robot action 
+	- However, for computational efficiency and more controlled information propagation, 3 separate networks are used to update relevant parts of the graph in sequence
+		> F(G^k) = f3(
+						G(
+							f1(G^a_l), 
+							f2(
+								G_c(f1(G^t_l)),
+								{f1(G^[1:L]_l)}^N_1
+							)
+						)
+					)
+		> f1 operates on local subgraphs G_l and propagates initial information about the point cloud observations to the gripper nodes
+		> f2 additionally propagates information through the demonstrated trajectories and allows all the relvant information from the context to be gathered at the gripper nodes of the curentsubgraph 
+		> f3 propagates information to nodes in the graph representing the actions
+	- Using such a structured and controlled propagation of information through the gtraph, together with the learnable attention mechanism allows the model to continuously aggregate relevant information from the context and make accurate predictions about the actions 
+		> It also resuts in a clear and meaningful bottleneck in the network with all relevant information from the context aggregated in a specific set of nodes f2(.)
+		> This bottleneck representation could be used for retrieval or to switch modalities (eg to language) via a smaller annotated dataset and a contrastive objectives
+	- f1, f2 and f3 are hetero-graph transformers with 2 layers and a hidden dimension of size 1024 (16 heads each with 64 dimensions)
+		> Since hetero graph are used, each node and edge type are processed with separate learnable weights and aggregated via summation to produce all node-wise embeddings 
+		> This can be understood as a set of cross-attention mechanism, each repsonsible for rocessing different parts of the graph representation 
+		> layer normalisation (lay-norm) is done between every attention layer, with additional residual connections added to ensure good propagation of gradients throughout the Network
+		> Finally, features of the nodes representing robot actions are processed with a 2 layer MLP equipped with GeLU activations (GeLU) to prduce the per-node denoising directions
+
+
+Data Generation
+	> Process
+		- firstly, the scene is populated with objects with which the robot will interact
+			> This is done by sampling 2 objects from the ShapeNet dataset and placing them randomnly on a plane
+		- then a pseudo-task is defined by sampling a sequence of waypoints on or near those objects
+			> number of waypoints is also randomnly selected (2-6), inherently modelling various manipulation tasks.
+		- 1 or more waypoints is assigned to change the gripper state, mimicking the rigid robotic grasp and release 
+		- a starting pose is then sampled for the gripper, where a mesh of a Robotiq 2F85 gripper is initialised 
+			> by moving the gripper between the aforementioned waypoints and attaching/detaching the closest object to it when the gripper state changes, we create a pseudo-demo 
+		- to further increase the diversity in pseudo-tasks, dirrent interpolation strategies between the waypoints (linear, cubic, interpolating while staying on a spherical manifold)
+		- gripper poses and segmented point cloud obs are then recorded using PyRender and 3 simulated depth cameras
+		- spacing between subsequent spaces are kept constant and uniform at 1cm and 3 degrees 
+		- moving objects to different poses, choosing a different starting gripper pose and repeating the process results in several pseudo-demos for the same pseudo-task
+			> we dont need to ensure that these generated trajectories are dynamically/kinematically feasible since env dynamics and taask specs are inferred from context at inference
+	> Bias Sampling 
+		- sampling is biased to favour waypoints resembling common tasks like grasping and pick-and-place to facilitate more efficient learning of common skills 
+		- this does not require creating dynamically feasible trajectories but rather involves designing sampling strategies for waypoints that loosely approximate these tasks 
+			> for instance by selecting a specific part of an object, moving the simulated gripper to that location, and closing the gripper, we can simulate a grasping task
+		- such sampling strategies are designed for common tasks (grasping, pick-and-place, opening/closing)
+		- half of pseudo-demos are generated using these strategies, well the rest are kept random
+	> Data Augementations 
+		- generated trajectories are augmented to facilitate the emergence of recovery behaviour of the learnt policies 
+		- firstly, for 30% of the trajectories, local disturbance associated with actions that would bring the robot back to the regference trajectory are added (NeRF-palm)
+		- secondly, for 10% of the data points, gripper's state (open/close) are changed purposely 
+			> this is found to be crucial as without it the policy will never try to re-grasp an object after initially closing the gripper 
+
+Implementation Details
+	> Demo Processing
+		- Demo trajectories are downsampled to a fixed length (L = 10)
+		- Demonstrations are recorded at a rate of 25Hz and 10Hz in simulation and the real world
+			> Lower rates in the real world is caused by the simultaneuos segmentation of objects of interest by Xmem++ (Xmem++)
+		- start and end of trajectories are then included and all the waypoints where gripper state changed are included too
+		- waypoints where gripper sufficiently slowed down are also included, as they indicate important trajectory stages 
+		- if current number of waypoints are less than L, intermediate waypoints between the already extracted ones are added 
+	> Data Augementations
+		- to achieve robust policies, it is crucial to randomise current observations and subsequent actions during training 
+			> the network can easily overfit to binary gripper states (if open, it stays opened and v.v)
+				- this is tackled by doing a 10% poisson dist, where the gripper state that is used as input to the model is flipped 
+			> doing this greatly increase the robustness of the resulting policies 
+			> during pseudo-demos generation process, local perturbation to the pose of the ripper is added, and point cloud observations and actions are adjusted accordingly
+				- this further increase robustness and enable recovery behaviour 
+				- pc obs and actions are adjusted to 'recover' the robot path 
+	> Normalisation 
+		- all outputs of the model is normalised to [-1,1], which is found to be crucial 
+		- to do this, we manually define the maximum end-effector displacement between subsequent action predictions to be no more tahn 1 cm in translation and 3 deg in rotation 
+			> noisy actions are also clamped to be within this range 
+		- thus, the flow prediction is caped to be at most twice the size of this range 
+			> knowing this, d_p'_t and d_p'_r (translation and rotation) are normalised between -1 and 1 independently, enabling efficient network training 
+		- for gripper state canges, this is done easily since they are expressed as binary states {0,1}
+		- we dont normalise the position of the point cloud observation but rather rely on the sine/cosine embeddings, a strategy found be to sufficient 
+	> Point Cloud Representation 
+		- segmented point cloud observations og object of interest in env as observations 
+		- those segmented point clouds dont include points on the robot or other static objects such as the table or distractors 
+		- in practice, point clouds are downsampled to contain 2048 points and they are expressed in the end-effector frame as T_ew x P to achieve stronger spatial generalisation capabilities 
+		- point clouds are then processed with a geometry encoder producing M=16 nodes used to construct our devised graph representation 
+	> Action denoising 
+		- when updating T_ea during our denoising process, we use calculated T_k,k-1 and calculate the transformation representing end-effector actions during the denoising process as T^k-1_ea = T_k,k-1 x T^k_ea 
+		- these actions are then used to construct a graph representation that is used in the next denoising step
+		- in practice, since we express point cloud obs in the end-effector frame, we apply the inverse of these actions to the M points representing the scene and construct local graphs of actions as: 
+			> G^a_l(T^(-1)_ea X P^t, T^t_we, a_g)
+			> since there are no absolute positions in the graphs, this is equivalent to applying the actions to te gripper pose T^t_we, but it allows us to recompute the geometry embeddings of the point clouds at their new pose, better matching the ones from demos 
+	> Simualted Experimental Setup
+		1: We generated all demos using only Cartesian Space planning, disregarding all demos that were generated using an RRT-based motion planner 
+			- this is so as to ensure taht demos did not have arbitary motions that will not be captured by our observations of segmented point clouds and end-effector poses
+		2: The orientation of the objects in the environment is restricted to be within [-pi/3, pi/3] 
+			> this is to match the distribution of object poses to the one present in our generated pseudo-demos
+			> also to ensure taht most tasks can be solved without complex motions requiring motion planners
+	> Failure Cases
+		- ...
