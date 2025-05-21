@@ -106,8 +106,8 @@ Graph Representation:
 			Feature vectors and positions are obtained from current point cloud -- {F,P}M = phi(P) 
 				* phi(P) is separately pre-trained as an implicit occupancy network, ensuring that {F,p} describes local geometries
 			Gripper state is then represented in the same format {F_g,p_g}6 by 
-				1) rigdly transforming key points (p_kg) on the end-effector p_g = T x p_kp.
-				2) assigning embeddings to p_g that encode node distinctions and gripper state information F_g = [f, phi_g(s_g)]
+				1: rigdly transforming key points (p_kg) on the end-effector p_g = T x p_kp.
+				2: assigning embeddings to p_g that encode node distinctions and gripper state information F_g = [f, phi_g(s_g)]
 		Finally, scene and gripper nodes are linked with directional edges
 			Each edge is assigned edge attribute e that represents relative positions in Cartesian space
 			*Each edge e_ij = sin(2^0 * pi * (p_j-p_i), cos(2^0 * pi * (p_j - p_i) ... sin(2^(D-1) ... , cos(2^(D-1)...)
@@ -315,3 +315,15 @@ Implementation Details
 			> also to ensure taht most tasks can be solved without complex motions requiring motion planners
 	> Failure Cases
 		- ...
+
+TLDR for implementating paper:
+	1: Generate pseudo demos for X tasks
+		1.1: Define X tasks 
+		1.2: Come up with generation strategy for these X tasks, done via sampling strategies on waypoint and gripper states 
+	2: Constructing graph representations from observations
+		2.1: constructing local graphs
+		2.2: constructing context graphs 
+		2.3: constructing action graphs 
+	3: Defining Neural Network architecture 
+	4: Construct RLBench tasks 
+	

@@ -1,1 +1,11 @@
 Denoising Diffusion Probabilistic Models
+
+Introduction
+    - A diffusion probabilistic model is a parameterized markov chain trained using variational inference to produce samples matching the data after finit time 
+        > Transitions of this chain are learned to reverse a diffusion process
+            - this reverse process is a Markov chain that gradually adds noise to the data in the opposite direction of sampling until signal is destroyed 
+        > When diffusion consists of small amounts of Gaussian noise, it is sufficient to set the sampling chain transitions to conditional Gaussians too
+            - this allows for a particularly simple neural network parameterisation
+
+Background 
+    - Diffusion models are
