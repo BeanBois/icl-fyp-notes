@@ -4,8 +4,8 @@ Paper Notes:
 
 Paper cites 2 primary challenges faced in ICL in language and vision
 
-	1) Given limited data, need appropriate inductive biases in observation and action representations for efficient learning in 3D space
-	2) Given inefficiency and labour cost of manual collectiong of robotics data, need a means to easily collect training data in a scalable way
+	1: Given limited data, need appropriate inductive biases in observation and action representations for efficient learning in 3D space
+	2: Given inefficiency and labour cost of manual collectiong of robotics data, need a means to easily collect training data in a scalable way
 
 	First challenge is addressed by introducing novel graph-based representation that integrates demonstartions, current point cloud observations, and the robot's actions within a unified graph space
 		Then In-Context Imitation Learning becomes a diffusion-based graph generation problem, enabling demonstartions and observations to be interpreted effectively in order to predict the robot's actions
@@ -22,13 +22,13 @@ Results:
 	IP achieves zero-shot transfer to language-defined tasks without needing large language-annotated datasets
 
 Contributions
-	1) cast ICL as diffusion-based graph generation problem
-	2) Show that model can be trained using procedurally generated pseudo-demos
-	3) Evaluate in sim and RL across various everyday tasks
+	1: cast ICL as diffusion-based graph generation problem
+	2: Show that model can be trained using procedurally generated pseudo-demos
+	3: Evaluate in sim and RL across various everyday tasks
 
 Related Works:
 
-	1) In-Context Learning:
+	1: In-Context Learning:
 		Allows models to adapt to new tasks using a small number of examples, without requiring explicit weight updates/retraining
 		ICL has been applied to enable robots to rapidly adapt to new tasks by using 
 			- foundation models, 
@@ -50,17 +50,17 @@ Related Works:
 	* I believe that Generative Adversarial IL might work for object geometries for empowerment measures? not sure about this one
 
 
-	2)Diffusion Models
+	2: Diffusion Models
 		Has the ability to iteratively refine randomnly sampled noise through a learned denoising process, ultimately generating high-quality samples from the underlying distribution.
 		Utiliseed to create:
-			1) Image augmentations to help robots adapt to diverse environments
-			2) generating 'imagined' goals/subgoals for guidiung policies
-			3) learning precise control policies
+			1: Image augmentations to help robots adapt to diverse environments
+			2: generating 'imagined' goals/subgoals for guidiung policies
+			3: learning precise control policies
 		This work proposes the use of diffusion models for graph generationg, enabling structured learning of complex distributions
 		- The good thing here is we are using hetero graphs, which provides flexibility. If we do some clustering algo to 'categorise' the point cloud obserfvations to the respective objects, it migh result in more consistent representation across task. Perspective/Orientation invariances might emerge if task representation during pseudo-demos remains task-specific.
 
 
-	3) GNNs
+	3: GNNs
 		GNNs have been used in robotics to:
 			- obtain RL policies
 			- Learn affordance models for skill transfer
@@ -110,7 +110,7 @@ Graph Representation:
 				2: assigning embeddings to p_g that encode node distinctions and gripper state information F_g = [f, phi_g(s_g)]
 		Finally, scene and gripper nodes are linked with directional edges
 			Each edge is assigned edge attribute e that represents relative positions in Cartesian space
-			*Each edge e_ij = sin(2^0 * pi * (p_j-p_i), cos(2^0 * pi * (p_j - p_i) ... sin(2^(D-1) ... , cos(2^(D-1)...)
+			* Each edge e_ij = sin(2^0 * pi * (p_j-p_i), cos(2^0 * pi * (p_j - p_i) ... sin(2^(D-1) ... , cos(2^(D-1)...)
 	
 	> Context Representation
 		As mentioned, a sequence of graphs, interleaved with actions, defines a trajectory within context C. 

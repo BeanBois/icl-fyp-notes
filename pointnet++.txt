@@ -1,0 +1,55 @@
+PointNet++: Deep Hierarchical Feature Learning on Point Sets in a Metric Space
+
+Introduction
+    - Interested in analyzing geometric point sets which are collections of points in a Euclidean space
+        > particularly, interested in point cloud captured by 3D scanners 
+    - As a set, such data has to be invariant to permutations of its members 
+    - Additionally, distance metric defines local neighborhoods that may exhibit different properties 
+        > EG density and other attributes of points may not be uniform across different locations 
+            - in 3D scanning, density variability can come from perspective effects, radial density varaition, motion ect
+    - Basic idea of PointNet is to learn a spatial encoding of each point and then aggregate all individual point features to a global point cloud signature 
+        > however, by design, PointNet does not capture local structure induced by the metric 
+        > Exploiting local structure has proven to be important for the success of convolutional architectures
+            - The ability to abstract local patterns along the hierarchy allows better generalizability to unseen cases 
+    - PointNet++ is a hierarchical neural netowrk that processes a set of points sampled in a metric space in a hierarchical fashion 
+    - General Idea of PointNet++ is simple:
+        1: first partition set of points into overlapping local features capturing fine geometric structures from small neighborhoods
+        2: these local features are further grouped into larger units and processed to produce higher level features 
+        3: this is repeated unitl features of the whole point set is obtained 
+
+    - Design of PointNet++ aims to address 2 issues:
+        1: how to generate the partioning of the point set?
+        2: how to abstract sets of points or local features through local feature learner 
+        > these 2 issues are correlated bc the partitioning of the point set has to produce common structures across partitions
+            - this is so that weights of local feature learners can be shared across partitions
+        > PointNet is used as local feature learner as it is an effective architecture to process an unordered set of points for semantic feature extraction
+            - it is also robust to input data corruption 
+            - PointNet helps abstract sets of local points or features into higher level representations 
+                > in this view, PointNet++ applies PointNet recursively on a nested partiioning of the input set
+    - Issue of how to generate overlapping partitioning of a point set still remains 
+        > Each partition is defined as a neighborhood ball in the underlying Euclidean space, whose parameters include centroid location and scale 
+        > The centroids are selected among input point set by a farthest point sampling algo to ensure even coverage of whole set
+        > Local receptive fields are dependent on both the input data and the metric, making it more efficient and effective 
+    - Furthermore, deiciding the appropriate scale of local neighborhood balls is a more challenging problem (intriguing too!)
+        > this is due to the entanglement of feature scale and non-uniformity of input point set 
+            - input point set are assumed to potentially have variable density (common IRL) 
+            - thus input point are different from CNN inputs which can be viewed as data defined on regular grids with uniform constant density 
+                > a counterpart to local partition scale is the size of kernel in CNN
+                > however, unlike in CNN where small kernel size can be effective, small neighborhod might not be effective for partitioning
+                    - this may be due to sampling deficiency (non-uniformity of points), Causing PointNet to not be able to capture patterns robustly
+Significant Contribution:
+    - PointNet++ leverages neighborhoods at multiple scales to achieve both robustness and detail capture 
+        > Assisted with random input dropout during training, the network learns to adaptively weight patterns detected at different scales 
+        and combine multi-scale features according to input data
+Problem Statement 
+    - Suppose that X = (M,d) is a discrete metric space whose metric is inherited from a Euclidean space R^n
+        > M is a subset of this Euc. space, or a set of points and d is the distance metric 
+        > density of M is non-uniform 
+    - we are inteterested in learning set functions f that take such X as the input and produce information of semantic interest regarding X.
+        > in practice, such f can be 
+            1: a classification function that assigns a label to X 
+            2: a segmentation function that assigns a per point label to each member of M
+
+        
+
+        

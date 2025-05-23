@@ -8,4 +8,28 @@ Introduction
             - this allows for a particularly simple neural network parameterisation
 
 Background 
-    - Diffusion models are
+    - Diffusion models are latent variable models of the form
+        > p_theta(x_0) := integrate p_theta(x_0:T) dx_1:T 
+        > x_1 ... x_T are latents of the same dimenstionality as the data x_0 ~ q(x_0)
+        > the join dist p_theta(x_0:T) is called the reverse process
+            - it is defined as a markov chain with learned gaussian transitions starting at p(x_T) = Norm(x_T;0,I)
+            - p_theta(x_0:T) = p(x_T) Mult[t=1:T] p(x_t-1|x_t) 
+            - p(x_t-1|x_t)  := N( x_t-1; mean_theta(x_t,t), covar_theta(x_t,t) )
+    - Diffusion models differs from other types of latent var models as the approximate posterior q(x_1:T|x_0) (called forward process) is fixed to a Markov chain that gradually adds Gaussian noise t the data accoding to a variance schedule beta_1 ... beta_T
+        > q(x_1:T|x_0) := Mult [t=1:T] q(x_t | x_t-1)
+        > q(x_t|x_t-1) := N(x_t| sqrt(1-beta_t) * x_t-1, beta_t I)
+    - Training is performed by optimising the usual variational bound on negative log-likelihood:
+        > E[-log p_theta(x_0)] <= E_q [-log ( p_theta(x_0:T) / q(x_1:T|x_0))] == E_q [-log p(x_T) - sum[t>=1] log (p_theta(x_t-1 | x_t) / q(x_t | x_t-1) )] := L
+    - The forward process variance beta_t can be learned by reparameterization of held constant as hyper-params 
+    - Expressiveness of the reverse process is ensured in part by the choice of Gaussian conditionals in p_thta(x_t-1|x_t)
+        > This is so as both forward and backward process have the same functional form when beta_t are small 
+    - A notable property of the forward process is that it admits sampling x_t at an arbitary timestep t in closed form: 
+        > using the notation a_t = 1- b_t and mean-a_t := mult [s=1:t] a_s we get q(x_t|x_0) = N(x_t; sqrt(mean-a_t) x_0, (1-mean-a_t)I)
+    - Efficient training is thus possible by optimising random terms of L with stochastic gradient descent 
+        > Further improvements comes from variance reduction by rewriting L as 
+            - E_q[L_T + L_t-1 - L_0] where
+                > L_T = D_kl( q(x_t|x) || p(x_T) )
+                > L_t-1  = D_KL( q(x_t-1 |x_t,x_0) || p_theta(x_t-1|x_t) ) 
+                > L_0 = log p_theta(x_0|x_1)
+                
+        

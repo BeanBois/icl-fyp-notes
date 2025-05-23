@@ -72,5 +72,5 @@ Methodology
             - These operations are essentual for processing vectors within the Poincare ball model
             1: Mobius Addition
                 For vectors x,y in D^n, the mobius addition x + y is defined as 
-            2:Mobius Scalar Mulitplication 
+            2: Mobius Scalar Mulitplication 
             3: Mobius Matrix-Vector Mulitplication
