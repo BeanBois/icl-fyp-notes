@@ -35,4 +35,4 @@ About point net, if we already know that the data has a hierarchical structure, 
 H-structure?
     > more specifically, can we use Hypform as module in the NN to process these structures?
     > furthermore, the context definition may itself be hierichical, 
-    > and so goes for the action phase, which composes of translation and rotation
+    > and so goes for the action phase, which can be movement or grabbing, which composes of translation and rotation; and just opening/ closing respectively

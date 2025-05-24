@@ -50,6 +50,32 @@ Problem Statement
             1: a classification function that assigns a label to X 
             2: a segmentation function that assigns a per point label to each member of M
 
-        
+Method
+    > PointNet++ is basically an extension of PointNet with added hierarchical structure
+    > As such, we first review PointNet, then introduce a basic extention of PointNet with hierichical strucutre, and finally propose PointNet++ that can robustly learn features even in non-uniformity sampled point sets
 
-        
+    1: Review of PointNet: A Universal Continuous Set Function Approximator
+        - Given an unordered set of points {x_1 ... x_n} with x_i in R^d, one can define a set function F : X -> R that maps a set of points to a vector
+            > f(x_1 ... x_n) = phi(MAX_[i = 1:n]{ h(x_i) }), where phi and h are MLPs 
+            > set function is invariant to input point permutation and can arbitrarily approximate any continuous set function
+            > Response of h(.) can be thought of as the spatial encodding of a point (PointNet)
+    2: Hierarchical Point Set Feature Learning 
+        > In PointNet, a single max pooling is used to aggregate the whole point set 
+        > our new architecture builds a hierarchical grouping of points and progressively abstract larger and larger local regions along the hierarchy
+            - this architecture is composed by a number of set abstraction levels 
+            - At each level, a set of points is processed and abstracted to produce a new set with fewer elements 
+            - The set abstraction level is made of 3 key elements:
+                1: Smapling Layer
+                    > this layer selects a set of points from input points, which defines the centroid of local regions 
+                    > More formaly, given input point {x_1 ... x_n}, we use iterative farthest point sampling to choose a subset of points {x_i1 ... x_im}
+                      such that x_ij is the most distant point (in metric distance) from set {x_i1 ... x_ij-1} with regards to the rest points 
+                        - Compared with random sampling, it has better coverage of the entire point set given the same number of centroids 
+                        - In contrast with CNNS that scan the vector sace agnostic of data distribution, this sampling strategy generates receptive fields 
+                          in a data dependent manner 
+                2: Grouping Later 
+                    > this layer constructs local region sets by finding "neighboring" points around the centroids 
+                    > 
+                3: PointNet Layer 
+                    > this layer uses a mini-PointNet to encode local region patterns into faeture vectors 
+                * Potentially Non-Euc can be used to replace any of these 3 layers, maybe the PointNet layer 
+            
