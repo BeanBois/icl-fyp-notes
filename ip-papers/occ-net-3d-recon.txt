@@ -1,0 +1,33 @@
+Occupancy Networks: Learning 3D Reconstruction in Function Space
+
+Abstract
+    - In 3D reconstruction, there does not exist a canonical representtion which is both computationally and memory efficient, while allowing for ]
+      representation in high-resolution geometry of arbitarary topologies 
+    - Many SOTA learning based 3D-Recon. approaches can hence only represent very coarse 3D geometry or are limited to a restricted domain 
+    - Occupancy networks is a new representation for learning-based 3D-Recon. methods
+        > it implicitly represent the 3D surface as the continuous decision boundary of a depp NN classifier 
+    - In contrast to existing approaches, our representation encodes a description of the 3D output at infinite resolution without excessive memory footprint 
+    - It is validated that the 3D representation can efficiently encode 3D structure and can be inferred from various kinds of input 
+    - Experiments demonstrates competitive results from a variety of challenging task 
+
+
+Introduction 
+    - Learning based approach for 3D-Recon is better than traditional multi-view stereo algorithms as it is able to encode rich prior information about the 
+      space of 3D shapes which helps resolve ambiguities in the input 
+    - However, there has been challenge in achieving a 3D representation that is both memory efficient and that can be efficiently inferred from data
+    - Existing representation can be categorised in 3 categories:
+        1: Voxel-based representation
+            > this is a straightforward generalisation of pixels ito the 3D case 
+            > However, memory footprint of this representation grows cubically with resolution, hence limiting naive implementation 
+            > While it is possible to reduce memory footprints (with oc-trees for eg), this can lead to complex implementation
+            > Existing data-adaptive algorithms are still limited to relatively small voxel grids 
+        2: Point-based representation
+            > This approach lacks connectivity structure of the underlying mesh and hence requires additional post-=processing steps to extract 3D geometry 
+        3: Mesh-based representation 
+            > Existing mesh representation are typically based on deforming a template mesh and hence do not allow arbitrary topologies 
+        * Both 2 & 3 are limited in the number of points/vertices which can be reliably predicted using a standard feedforward network 
+    - Occupancy Network is based on directly learning the continuous 3D occupancy function 
+        > Instead of predicting a voxelised representation at a fixed resolution, we predict the complete occupancy function with a neural network f_theta
+            - f_theta can be evaluated at arbitrary resolution, which drastically reduces memory footpring during training 
+            - At inference time, we extract the mesh from the learned model using a simple multi-resolution isosurface extraction algorithm 
+    
