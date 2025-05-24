@@ -74,8 +74,83 @@ Method
                           in a data dependent manner 
                 2: Grouping Later 
                     > this layer constructs local region sets by finding "neighboring" points around the centroids 
-                    > 
+                    > The input to this layer is:
+                        1: a point set of size N x (d + C), d is the dimension coords , N is num of points and C is dim of point feature
+                        2: coordinates of a set of centroids of size N_ x d 
+                    > outputs are groups of point set of size N_ x K x (d + C), where each group corresponds to a local region and K is the num of points in 
+                      the neighborhood of centroid points 
+                        * K varies across groups, but the suceeding PointNet layer is able to convert a flexible number of points into a fixed length local region feature vector 
+                    > In CNN, a local region of a pixel consist of pixels with array indices within certain Manhattan distance (kernel size) of the pixel 
+                        - In a point set sampled from metric space, the neighbourhood of a point is defined by metric distance 
+                        - Ball query finds all points that are within radius to the query point (an upper limit of K is set in implementaion for comp tracibility)
+                            > an alternative range query is K nearest neighborhood search which finds a fixed number of neighboring points 
+                            > Compared with kNN, ball query's local neighborhood guarantees a fixed region scale, thus making local region feature more generalisable across space
+                                - this is preffered for tasks requiring local pattern recognition (semantic point labelling)                            
                 3: PointNet Layer 
                     > this layer uses a mini-PointNet to encode local region patterns into faeture vectors 
+                    > the input to this layer are N_ local regions of points with data size N_ x K x (d + C)
+                    > each local region in the output is abstracted by its centroid and local feature that encodes the centroid's neighborhood 
+                    > output data size is N_ x (d + C_)
+                    > The coordinates of points in a local region are firstly translated into a local frame relative to the centroid point: x^(j)_i = x^(j)_i - x'^(j) for i = 1 ... K and j = 1 ... d
+                      where x' is the coordinate of the centroid 
+                        * as oppose to this translation, a sine/cosine encoding is used in the instant policy paper! 
+                        - PointNet is used as the basic building block for local pattern learning 
+                        - by using relative coords together with point features, we can capture point-to-point relations in the local region 
                 * Potentially Non-Euc can be used to replace any of these 3 layers, maybe the PointNet layer 
+            - TLDR the set abstraction level taks an N x (d+C) matrix as input that is from N points with d-dim coords and C-dim point features
+              and outputs an N_ x ( d+C_ ) matrix of N_ subsampled points with d-dim coords and C_-dim feature vectors summarizing local context 
+    3: Robust Feature Learning under Non-Uniform Sampling Density
+        - Non-Uniformity introduces a significant challenge for point set feature learning 
+            > Features learned in dense data may not generalise to sparsely sampled regions 
+            > Consequently, models trained for sparse point cloud may not recognise fine-grained local structures
+        - Ideally, we want to inspect into a point set to capture finest details in densely sampled regions 
+            > But such close inspection is prohibited at low density areas as local patterns may be corrupted by smapling deficiency
+            > In such case, we should look for larger scale patterns in greater viscinity 
+                - this is achieved with a density adaptive PointNet layer that learn to combine features from regions of different scales when input sampling density changes (aka PointNet++)
+        - In the Naive model, each abstraction level contains grouping and feature extraction of a single scale 
+            > in PointNet++, each abstraction level extracts multiple scales of local patterns and combine them intellligently according to local point densities 
+            > in terms of grouping local regions and combining features from different scales, we propose 2 types of density adaptive layers 
+                1: Multi-scale Grouping 
+                    - This is a naive implementation, where grouping layers are applied with different scales, followed by according PointNets to extract features of each scale
+                    - Features at different scales are concatenated to form a multi-scale feature
+                    - A network is then trained to learn an optimised strategy to combine the multi-csale features
+                        > this is done by randomly dropping out input points with a randomised probability for each instance (aka random input dropout)
+                        > Specifically, for each training point set, we choose a dropout ratio \theta uniformly sample from [0,p] where p <= 1 (\theta in [0:p])
+                            - For each point we randomnly drop a point with probability \theta
+                            - In practice we set p = 0.95 to avoid generating to avoid generating empty point sets 
+                        > In doing so we present the network with training sets of various sparsity (induced by randomness in \theta) and varying uniformity (induced by randomness in dropout)
+                    - During testing, all available points are kept 
+                    - This approach is computationally expensive since it runs local PointNet at large scale neighborhood for every centroid point
+                        > In particular, since the number of centroid points is usually quite large at the lowest level, the time cost is significant 
+                            * so thats why its called a 'ball model'
+                2: Multi-resolution grouping 
+                    - Due to the computation cost of MSG, the MRG approach is used, where expensive computations are avoided but the ability to adaptively aggregate information according to the 
+                      distributional properties of points is kept
+                    - Features of a region at some level L_i is a concatenation of 2 vector     
+                        > One vector is obtained by summarizing the features at each subregion from the lower level L_i-1 using the set abstraction level
+                        > the other vector is the feature that is obtained by directly processing all raw points in the local region using a single PointNet
+                    - When density of a local region is low, the first vector may be less reliable than the second vector, since the subregion in computing the first vector contains even sparser
+                      points and suffers more from sampling deficiency
+                        > In such a case, the second vector should be weighted higher
+                    - On the other hand, when the density of a local region is high, the first vector provides information of finer details since it possesses the ability to inspect at higher resolution
+                      recursively in lower levels 
+                    * compared with MSG, this approach is computationally more efficient since we avoid the feature extraction in large scale neighborhoods at lowest levels (Kinda like divide-and-conquer/memoisation)
+    > Point Feature Propagation for Set segmentation
+        - In the set abstraction layer, the original point set is subsampled 
+            > However in set segmentation task like semantic point labelling, we want to obtain point features for all the original points
+        - One solution is to alway sample all points as centroids in all set abstraction levels
+            > but this results in high computation cost 
+        - Another way is to propagate features from subsampled points to the original points 
+            > To do this, a hierarchical propagation strategy with distance based interpolation and across level skip links 
+                - In a feature propagation level, we propagate point features from N_l x (d + C) points to N_l-1 points, where N_l-1 and N_l (N_l <= N_l-1) are point set size of input and 
+                  output of set abstraction level l 
+                    > Feature propagation is achieved by interpolating feature values f of N_l points at coordinates of the N_l-1 points 
+                        - Among many choices for interpolation, we use inverse distance weighted averaged based on kNN:
+                            > f^j(x) = \frac{sum[i=1:k] w_i(x) f^j_i} {sum[i=1:k] w_i(x)}, where w_i(x) = 1/d(x,x_i)^p, j = 1 ... C [ by default, p = 2, k = 3]
+                        - the interpolated features on N_l-1 points are then concatenated with skip linked point features from the set abstraction level 
+                        - then the concatenated features are passed through a "unit pointnet", which is similar to one-by-one convolution in CNNs
+                            > A few shared fully connected and ReLU layers are applied to update each point's feature vector
+                        - The process is repeated until we have propagated features to the original set of points 
+
+
             
