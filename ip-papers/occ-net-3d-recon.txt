@@ -29,5 +29,91 @@ Introduction
     - Occupancy Network is based on directly learning the continuous 3D occupancy function 
         > Instead of predicting a voxelised representation at a fixed resolution, we predict the complete occupancy function with a neural network f_theta
             - f_theta can be evaluated at arbitrary resolution, which drastically reduces memory footpring during training 
-            - At inference time, we extract the mesh from the learned model using a simple multi-resolution isosurface extraction algorithm 
-    
+            - At inference time, we extract the mesh from the learned model 
+                > this is done by using a simple multi-resolution isosurface extraction algorithm which trivially parallelises over 3D locations 
+        > Contributions:
+            1: Introduce new 3D representaion 
+            2: Show how this representaion can be used for 3D-Recon from various input types 
+            3: Experimentally validate that our approach is able to generate high-quality meshes and demostrates SOTA performance 
+
+
+Related Works 
+    1: Voxel Representations
+        - Due to their simplicity, they are commonly used for discriminative and generative 3D tasks 
+        - Early works considered 3D-recon from a single image using 3D CNNs which operate on voxel grids 
+            > however, these are limited to small voxel grids due to memory requirements 
+            > While recent works have been able to utilise larger grid size, they are only possible with shallow architectures and small batch size, 
+              leading to slow training 
+        - Later works looks at 3D-recon from multiple input views (>1 image)
+            > One approach encode camera parameters together with input images in a 3D voxel representation and apply 3D conv to reconstruct 3D scenes from mult views 
+                * Ji et al. and Kar et al. (authors)
+            > Another approach introduces an architecture that predict voxel occupancies from multiple images, exploiting multi-view geometry constraints
+                * Paschalidou et al. (author)
+            > Other works applied voxel representation to learn generative models of 3D shapes 
+                - Most of these methods either based on variational auto-encoder or generative adversarial networks (GAIL) 
+                    * Eg in papers 4, 58, 75 in paper 
+        - Due to high memory requirements of voxel representations, recent works have proposed to reconstruct 3D objects in multi-resolution fashion [28,67]
+            > However resulting methods are often complicated to implement and require multiple passes over the input to generate the final 3D model 
+                - Furthermore, they are still limited to small voxel grids 
+        - For achieving sub-voxel precision, severak works have proposed to predict truncated signed distance fields (TSDF) where each point in a 3D grids 
+          stores the truncated signed distance to the closest 3D surface point
+            > However, this representation is usually much harder to learn compared to occupancy representations as the network must reason about distance 
+              functions in 3D space instead of merely classifying a voxel as occupied or not 
+            > This representation is still limited by the resolution of the underlying 3D grid too 
+    2: Point representaion
+        - An alternative representation of 3D geometry is given by 3D point clouds
+        - [54,56] prioneered point clouds as a repreesntation for discriminative deep learning tasks 
+            > They achieved permutation invariance by applying a fully connected NN to each point independently followed by a global pooling operation 
+        - [17] introduced point clouds as a output representation of 3D-Recon 
+        - However, unlike other approach, this approach requires additional non-trivial post-processing steps to generate the final 3D mesh 
+    3: Mesh Representation 
+        - Meshes have first been considered for discriminative 3D classification or segmentation tasks by applying convolutions on the graph spanned by the 
+          mesh's vertices and edges
+        - They have also been considered as output representation for 3D recon
+            > however, most of these approach are prone to generating self-intersecting meshes 
+            > furthermore, they are only able to generate meshes with simple topology, require a reference template from the same object class or 
+              not being able to guarantee closed surface 
+            > [43] proposed an end-to-end learnable version of the marching cubes algorithm [44]
+                - But it is still limited by memory requirements of the underlying 3D grid and hence also restricted to small voxel resolution 
+    - In contrast to the aforementioned approaches, occupancy net leads to high resolution closed surfaces without self-intersection 
+        > it also doesnt require template meshes from the same object class as input 
+        > this idea is related to classical level set [1,14,50] approaches to multi-view 3D-recon 
+            * might be worth to check out these papers to better understand intuition of occupancy net 
+            - However, instead of solving a differential equation, we use deep learning to obtain a more expressive representation which can be naturally
+              integrated into an end-to-end learning pipeline 
+
+Method 
+    Occupancy Net : Introduction 
+        - Ideally, we want to be able to reason about the occupancy at every possible 3D point (p in R^3) as opposed to only at fixed discrete 3D location (like in Voxel Rep.)
+            > we call this reasoning function the occupancy function of the 3D object  o : R^3 -> {0,1}
+            > This function can be approximated with a NN that assigns to every location p an occupancy probability between 0 and 1 
+                * The NN mentioned above is equivalent to a NN for binary classification, but in this case we are interested in the decision boundary which 
+                  implicitly represents the object's surface 
+                - When network is used for 3D-recon based on obs of object (image/point cloud), inference must be conditioned on the input 
+                    > A simple functional equivalence to achieve this 
+                        - A function that takes an obs x in X as input and has a function from p in R^3 to R as output is equivalent to a function that
+                          takes a pair (x,p) in R^3 x X as input and outputs a real number 
+                        - This latter function can be simply parameterized by a NN f_theta that takes a pair (p,x) as input and outputs a real number 
+                            > f_theta : R^3 x X -> [0,1]. This is known as the Occupancy Network 
+    Training 
+        - To learn the parameters \theta for the Occupancy Network, we randomnly sample points in the 3D bounding volume of the object under consideration
+            > For the i-th sample points in a training batch, we sample K points p_ij in R^3, j = 1 ... K
+            > The mini batch loss L_B is then evaluated 
+                - L_B(\theta) = 1/|B| sum[i = 1:B] sum[j = 1:K] L(f_theta(p_ij, x_i), o_ij)
+                    > x_i is the ith observation of batch B, o_ij denotes the true occupancy at point p_ij and L(.,.) is a cross entropy classification loss
+        - The performance of the model depends on the sampling scheme that is employed for drawing the locations p_ij that are used for training 
+            > In practice, it is found that sampling uniformly inside the bounding box of the object with an additional small padding yields the best results
+        - Using occ-net's 3D representation can also be used for learning probabilistic latent variable models 
+            > Towards this goal, an encoder network g_phi(.) that takes location p_ij and occupancies o_ij as input is introduced
+                - this encoder predicts mean and std of a Gaussian dist q_phi(z|(p_ij, o_ij)_[j= 1:K]) on latent var z in R^L as output 
+            > Then a lower bound to the negative log-likelihood of the generative model p((o_ij)_[j=1:K] | (p_ij)_[j=1:K]) is optimised:
+                - L^gen_B (\theta, \phi) = L_B + KL(q_phi(.) | p_0(z) )
+                    > p_0(.) is the prior distribution on latent variable z (typically Gaus) and z_i is sampled according to q_phi(.) 
+    Inference 
+        - For extracting the isosurface corresponding to a new obs given a trained occupancy network, we introduce Multiresolution IsoSurface Extraction (MISE)
+            > MISE is a hierarchical isosurface extraction algorithm 
+            > By incrementally building an octree, MISE allows for extraction of high resolution meshes from occupancy network without densely evaluating
+              all points of a high-dimensional occupancy grid 
+        - MISE is done by first discretizing the volumetric space at an initial resolution and evaluating the occupancy network f_theta(p,x) for all p in this grid
+            > 
+        
