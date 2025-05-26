@@ -115,5 +115,32 @@ Method
             > By incrementally building an octree, MISE allows for extraction of high resolution meshes from occupancy network without densely evaluating
               all points of a high-dimensional occupancy grid 
         - MISE is done by first discretizing the volumetric space at an initial resolution and evaluating the occupancy network f_theta(p,x) for all p in this grid
-            > 
+            > We mark all grid points p as occupied for which f_theta(p,x) >= \tau, where \tau is some threshold 
+            > Next we mark all voxels as active if there are at least 2 adjacent grid points that have different occupancy predictions 
+                - These are the voxels that will intersect the mesh if we applied the marching cubes algorithm at the current resolution 
+            > Then, all active voxels are subdivied into 8 subvoxels and evaluate all new grid points which are introduced to the occupancy grid through this sub division 
+            > Steps are repeated till a desired resolution is reached 
+            > At final desired resolution, Marchin Cubes algorithm [44] is applied to extract an approximate isosurface 
+                - {p in R^3 | f_theta(p,x) = \tau}
+        - This algorithm converges to the correct mesh if the occupancy grid at the initial resolution contains points from every connected component of both the interior and exterior of the mesh 
+            > It is hence important to take an inital resolution which is high enough to satisfy this condition 
+            > In practice, an initial resolution of 32^3 is sufficient in most cases 
+        - The initial mesh extracted by the Marching cubes algorithm can be further refined 
+            > In the first step, we simplify the mesh using the Fast-Quadratic-Mesh-Simplification algorithm [20]
+            > Then the ouput mesh is refined using first and second order (gradient) information
+                - Towards this goal, we sample random points p_k from each face of the output mesh and minimise the loss: 
+                    > sum[k =1:K](f_theta(p_k,x) - \tau)^2 + \lambda|| \frac{delta_p f_theta(p_k,x)}{|| delta_p f_theta(p_k,x) ||} - n(p_k) ||
+                        - n(p_k) denotes the normal vector of the mesh at p_k 
+                        - In practice \lambda = 0.01 
+                        - Minimisation of the 2nd term uses second order gradient information and can be efficiently implemented using Double-Backpropagation [15]
+                - This step removes the discretisation artifacts of the Marching Cubes approximation 
+                    > This will not be possible if a direct prediction of a voxel-based representation is done 
+                - Additionally, this approach allows efficient extraction of normals for all vertices of output mesh with simple backpropagation through occupation network 
+                - In total, inference algorithm takes 3s per mesh 
+    Implementation details 
+        - Occupancy network is implemented using a fully connected neural network with 5 ResNet blocks and conditioning it on the input using conditional batch normalisation 
+        - Different encoder architecture is exploited based on the type of input 
+            > For point clouds and unconditional mesh generation, PointNet encoder is used (PointNet++ in instant policy)
+            
+
         

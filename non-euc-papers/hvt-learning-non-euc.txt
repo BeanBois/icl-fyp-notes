@@ -3,7 +3,7 @@ HVT: A COMPREHENSIVE VISION FRAMEWORK FOR LEARNING IN NON-EUCLIDEAN SPACE
 Many real-world datasets (images) exhibit hierarchical structures better captured in non-euclidean spaces
 Images are inherently hierarchical, building from pixels, to edges, to shapes, to objects and finally to scene
     This hierarchical nature reflects a tree-like structure 
-    > ViTs uses a patch-based approach to introduce a hierarchical representation 
+    > Vision Transformers (ViTs) uses a patch-based approach to introduce a hierarchical representation 
         - It does so as:
             1: each patch captures local patterns like textures/edges
             2: By attending over patches, the model aggregates local information to uinderstand the overall structure 
@@ -14,9 +14,10 @@ Images are inherently hierarchical, building from pixels, to edges, to shapes, t
 
 Related Studies 
     - Hyperbolic Geometry in Machine Learning
-        > Nicker & Kiela sucessfully used Poincare embeddings to model hierichical data 
+        > Nicker & Kiela sucessfully used Poincare embeddings to model hierichical data [Poincare]
         > This was further refined by Ganea 2018, who introduced hyperbolic emb for entailment cones, effectively capturing asymmetric r/s
-        > Khrulkov 2020, Liu 2020 extended these concepts to visual data and zero-shot recognition, respectively, underscoring the versatility of hyperbolic embeddings in handling complex visual tasks
+        > Khrulkov 2020, Liu 2020 extended these concepts to visual data and zero-shot recognition, respectively, underscoring the versatility of hyperbolic embeddings in handling 
+        complex visual tasks
         > Ermolov (2022) developed Hyperbolic Vision Transformers that incorporate these embeddings within Vision Transformer architectures, enhancing metric learning.
         > Our model extends on HVTR by incorporating hyperbolic geometry throughout the transformer operations, from Mobious transformations to hyperbolic self-attention
 
@@ -27,7 +28,8 @@ Related Studies
         > Hyperbolic Attention Networks by Gulchehe 2018 is an alternative method from our model
             - It differs primarily in how  hyperbolic geometry is applied within the attention mechanism
             - HAN focuses on embedding te activations into hyperbolic space using both the hyperboloid and Klein models, leveraging hyperbolic matching and aggregation operations
-            - Our model incorporates learnable curvature within positional embeddings, head-specific scaling in attention, and hyperbolic layer normalization, offering more flexibility and efficiency in capturing hierarchical data 
+            - Our model incorporates learnable curvature within positional embeddings, head-specific scaling in attention, and hyperbolic layer normalization, offering more flexibility and 
+            efficiency in capturing hierarchical data 
                 > Our model also utilises Poincare ball model for its computation suitability in vision tasks
     
     - Vision Transformers 
@@ -71,6 +73,57 @@ Methodology
             - Mobius transformations is utilised to adapt Vision Transformer components to hyperbolic space
             - These operations are essentual for processing vectors within the Poincare ball model
             1: Mobius Addition
-                For vectors x,y in D^n, the mobius addition x + y is defined as 
+                - For vectors x,y in D^n, the mobius addition x + y is defined as 
+                    > x + y = \frac{(1+ 2<x,y> + ||y||^2 )x + (1 - ||x||^2)y}{1 + 2<x,y> + ||x||^2 ||y||^2}
+                    > <.,.> denotes Euclidean inner product 
+                        - For vectors x =  (x_1 ... x_n) and y = (y_1 ... y_n), <x,y> = sum[i=1:n] (x_i)(y_i) = x . y (dot product)
+                        - The inner product encodes fundamental geometric concepts:
+                            1: Length/Norm: ||u|| = √⟨u, u⟩
+                            2: Angle: cos θ = ⟨u, v⟩ / (||u|| ||v||)
+                            3: Orthogonality: u ⊥ v if and only if ⟨u, v⟩ = 0
+                            4: Distance: d(u, v) = ||u - v||
+                - Properties:
+                    1: if |x| < 1 & |y| < 1, then |x+y| < 1 
+                    2: Commutative : x + y == y + x
+                    3: Associative: (a + b) + c == a + (b + c)
+                    4: Identity Element 0: a + 0 = a 
+                    5: Inverse of a is -a : a + -a = 0 
+                - Mobius addition generalises vector additioni to hyperbolic space, ensuring the result remains within manifold 
+                - Physical Interpretation:
+                    > In special relativity, In special relativity, if you have two velocities v₁ and v₂ (as fractions of light speed c), their relativistic sum isn't simply v₁ + v₂. 
+                    Instead, it follows the Mobius addition formula, ensuring the combined velocity never exceeds the speed of light.
+                - Mobius Addition naturally emerges when working with distances and transformations in Poincaré disk model
             2: Mobius Scalar Mulitplication 
+                - For a scalar r in R and a vector x in D^n, Mobius scalar mult r * x can be defined as 
+                    > r * x = tanh( r tanh^-1 ( ||x|| ) ) \frac{x}{||x||}
+                - Properties:
+                    1: Distributivity over Mob Addition: r * (a + b) = (r * a) + (r * b)
+                    2: Associativivity with real multiplication: (rs) * a = r * (s * a)
+                    3: Identity Element 1: 1 * a = a 
+                    4: Zero Annihilation: 0 * a = 0
+                    5: Sign Behaviour: a * -1 = -a (Mobius Inverse) 
+                - This operation scales a vector while preserving its direction and ensures the scaled vector remains within the Poincare ball.
+                - In the Poincaré disk model, Mobius scalar multiplication corresponds to scaling along hyperbolic rays from the origin. The operation:
+                    1: Preserves the direction of hyperbolic geodesics through the origin
+                    2: Scales hyperbolic distances in a non-linear way
+                    3: Maintains the conformal structure of the hyperbolic plane
             3: Mobius Matrix-Vector Mulitplication
+                - Given a matrix W in R^(m x n) and a vector x in D^n, Mobius matrix-vector multiplication mv_mult(W, x) is defined as:
+                    > mv_mult(W, x) = tanh( \frac{||Wx||}{||x||} tanh^-1(||x||) ) \frac{Wx}{||Wx||}, if x != 0 
+                    > Or mv_mult(W,x) = (W_1,1 * x_1) + ... (W_1,n * x_n)
+                - Mobius matrix-vector multiplication extends matrix-vector operations to hyperbolic geometry, providing a way to perform linear transformations in non-Euclidean spaces while 
+                preserving the underlying hyperbolic structure.
+                - This operation extends Mobius scalar multiplication to linear transformations, allowing us to apply linear layers within hyperbolic space 
+
+            4: Mobius Concatenation
+                - To combine multiple vectors x_1, ... x_n in D^n, we use Mobius concatenation:
+                    MULT[j=1:n]x_j = x_1 * x_2 ... * x_n 
+
+        - Hyperbolic Neural Network Components 
+            > Mobius operations is incorporated into neural network components to enable ViTs to operate within hyperbolic space
+            1: Hyperbolic Linear Layers 
+                - Traditional layers (h = Wx + b) can be adapted to hyperbolic space using Mobius matrix-vector multiplication and addition:
+                    > h = mv_mult(W,x) + b
+                    > x in D^n, W in R^(m x n), b in D^m
+            2: Hyperbolic Activation and Normalisation
+                saf
