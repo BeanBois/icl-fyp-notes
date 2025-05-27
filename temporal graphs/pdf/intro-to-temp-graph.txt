@@ -1,0 +1,77 @@
+An Introduction to Temporal Graphs: An Algorithmic Perspective
+https://www.tandfonline.com/doi/full/10.1080/15427951.2016.1177801
+
+Abstract 
+    - A temporal graph can be informally understood as a graph that changes with time 
+    - When time is discrete and only the r/s between the participating entities may change (and not the entities themselves), a temporal graph may be viewed 
+    as a sequence G_1 ... G_l of static graphs over the same set of nodes v
+        > Assumption of static object may be troublesome due to gripper state changes, so need to model state change as a change in r/s within gripper itself
+    - While intuitively simple, temporal dimensions presents difficulties within graph theory as it greatly mutates graph properties and problem along its(temporal) dimension 
+    - This paper looks at advances in temporal graphs and its problem 
+
+Introduction 
+    - Graphs can be simply thought of as a model for a set of objects and a set of pairwise relations between them 
+        > For more complex relationships, labeled graphs are used, whereby edges are assigned some values from a given domain 
+    - A temporal graph can be informally understood as a graph that changes with time (dynamic)
+        > Dynamicity of the network can be a result of randomness, where the interest is on determining "good" properties of the dynamic network that holds with high probability
+            * with high probability in this case means a probability of at least (1 - \frac{1}{n^c} for some constant c >= 1, where n is |nodes| ) 
+    - In terms of modelling, they can be seen as a special case of labeled graphs, in which labels capture some measure of time 
+        > Inversely, it is also true that any property of a graph labeled from a discrete set of labels corresponds to some temporal property if interpreted appriopriately
+            - For eg, a proper edge-coloring ( no 2 adj edge share same color ) corresponds to a temporal graph in which no 2 adj edges share a common time-label 
+            ( no 2 adj edg appear at the same time XOR r/s )
+    - Temporal graph wrt Combinatorial Optimisation Complexities
+        > It is suggested that temporal versions of comb Optimisation problems are accompanied by increases in complexity [Section 8]
+        > max-flow and min-cut theorem holds with unit capacities for time-respecting paths 
+            * time-respecting path ( AKA temporal path, journey ) is like a usual path whose edges, additionally, uses strictly increasing times (or non-decreasing)
+        > Additionally, [38] proved that in temporal graphs, the classical formulation of Menger's theorem is violated and the computation of the number of node-disjoint s-z paths becomes NP-complete 
+            - A reformulation of Menger's theorem which is valid for all temporal graph was achieved in [49]. [Results in Section 3]
+            * Menger's theorem is the analogue of the max-flow min-cut theorem for undirected graphs 
+                > it states that the max number of node-disjoint s-z paths is equal to the min number of nodes needed to separate s from z 
+    - Temporal Graphs in Distributed systems: Contributions
+        > One contribution by Dist systems is presented in offline centralised algorithms for k-token dissemnication problem
+            - In k-token dissemination, there are k distinct pieces of information (tokens) that are initially present in some distributed process
+            - the problem is to disseminate all the k tokens to all the processes in the dynamic network, under the constraint that on token can go through an edge per reconstructed
+            - This is further elaborated in Section 4
+        > Another contribution by Dist system concerns the investigation of how instantaneous properties ( or properties satisfied for some larger but restricted time-windows ) relate to global 
+        properties of temporal graph 
+            - Such properties may be:  
+                1: continuously connected instances
+                2: guaranteed connectivity 
+                3: guaranteed propagation of information in a given time-window length (holding for all times)
+                4: small instantaneuos diameter 
+            - The goal is to determine whether these properties imply some "good" temporal-connectivty properties of the temporal graph as a whole, for example a small temporal diameter
+            - All these, together with the novel notions and metrics that have been proposed for capturing such properties formally, are presented in Section 5
+    - Designing an "efficient" temporal graph, given some requirements that the graph should meet 
+        > This problem is studied in [49], and authors introduced several interesting cost-minimising parameters for optimal temporal network design 
+            - One of the parameters is the temporality of a graph G
+                > The goal here is to create a temporal version of G minimising the max number of labels of an edge 
+            - The other is the temporal cost of G
+                > The goal is to minimise the total number of label used 
+        > Optimisation of these parameters has to be performed subject to some connectivity constraint 
+            - Several upper and lower bounds for the temporality of some basic graph families (rings, directed acyclic graphs, trees) have been proven by these connectivity constraint
+            - Trade-off between temporality and max label of rings are proven too
+            - There exists a generic method for computing a lower bound of the temporality of an arbitary graph G wrt the constraint of preserving a time-respecting analogue of every 
+            simple path of G 
+            - These constraints also proved that the temporal cost wrt the constraint of preserving at least on time-respecting path from u to v whenever v is reachable from u in G is APX-hard
+            - Most results are discussed in Section 6
+    - Recurrent and periodic graohs
+        > This family of graph underlie many real-world system (like transport system)
+        > These graphs usually have the convenient property of being susceptible to a succint representation of their evolution 
+            * Eg there could be a set of functions (i.e linear functions) describing/generating the availbility times of the edges 
+        > These graphs are further discussed in Section 8
+    - Random temporal graphs 
+        > This is another succintly representable model for which labels are chosen according to some probability distribution 
+        > This is motivated by the fact that the dynamicity of a great variety of real temporal networks is the rsult of some underlying random process 
+            - Furthermore, randomness can usually simplify the understanding of the behaviour of several interesting network properties 
+                > Eg many of the average properties of Erdos-Renyi random graph model can be calculated exactly in the limit
+            - Additionally they can assist the efficient design of temporal graph with a desired property (by sacrificing correctness to hold w.h.p)
+                > Eg to have for all (u,v) a time-respecting path from u to v 
+        > As such randomness is a valuable tool in the study of temporal graph 
+            * I think this is where i visualise Factor graphs to come in! 
+        > Section 9 gives a brief introduction to such models 
+        > Section 2 also provides all necessary preliminaries 
+    - Further studies beyond the paper 
+        > [33] gives an extensive overview of the literature realted to temporal networks from a diverse range of scientific domains 
+        > 
+
+        
