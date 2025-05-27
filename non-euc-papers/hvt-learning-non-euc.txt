@@ -126,4 +126,118 @@ Methodology
                     > h = mv_mult(W,x) + b
                     > x in D^n, W in R^(m x n), b in D^m
             2: Hyperbolic Activation and Normalisation
-                saf
+                - Activation functions and normalisation are applied in the tangent space at the origin to leverage familiar Euclidean Operations
+                    1: The logarithmic map log_0 : D^n -> T_0D^n maps points from the manifold to the tangent space
+                        > log_0(x) = \frac{2tanh^-1(||x||)}{||x||} x
+                    2: The exponential map exp_0 : T_0D^n -> D^n brings points back to the manifold
+                        > exp_0(v) = tanh(\frac{||v||}{2}) \frac{v}{||v||}
+                - with these maps, we define hyperbolic versioins of the ReLU activation and Layer Normalisation:
+                    > ReLU^D(x) = exp_0(ReLU(log_0(x)))
+                        * Can potentially do something similar to GeLU 
+                    > LayerNorm^D(x) = exp_0(LayerNorm(log_0(x))) 
+                - This approach allow us to apply standard activation and normalisation techniques within hyperbolic space 
+        - Hyperbolic Layer Scaling 
+            > To stabilise residual connections in hyperbolicnspace, we introduce a learnable scaling parameter \beta 
+                X' = X + \beta * O, where X is the input, O is the output and \beta in R scales the residual contribution 
+
+    - Hyperbolic Vision Transformer Architecture
+        - Hyperbolic geometry is integrated into the ViT architecture by modifying key components to operate within hyperbolic space 
+        1: Learnable Hyperbolic Positional Embedding 
+            - Positional Embeddings are adjusted using a learnable curvature parameter c to represent positional information in hyperbolic space better:    
+                > E_pos = c * E^0_pos, where E^0_pos is in D^(1 x N x E) are the initial positional embedding
+                > X = X + E_pos
+                * IP uses sine/cosine embeddings. How can this be applied here? 
+        2: Hyperbolic Self-Attention Mechanism 
+            - Self Attention mechanism is extended to hyperbolic space using Mobius operations and hyperbolic distance computations
+                > Symbols for equations:
+                    B : Batch size 
+                    H : number of attention heads 
+                    N : sequence Length
+                    D : Head Dimenstion, where D = E/H and E is the embedding dimension 
+                    c: Curvature parameter of the Poincare ball model 
+                    \epsilon : small constant for numerical stability (1 * 10^-15)
+                    \delta : small constant for clamping (1 * 10^-7)
+                    p : DropConnect probability 
+
+            - Given input embeddings X in D^(B x N x E) and using hyperbolic linear layers , we compute:
+                1: Queries Q = mv_mult(X,W_Q) + b_Q 
+                2: Keys K = mv_mult(X, W_K) + b_K
+                3: Values V = mv_mult(X, W_V) + b_V
+                > These values are then reshaped to accommodate multiple attention heads 
+                    - Q, K, V in D^(B x H x N x D)
+            
+            - Hyperbolic Distance Computation 
+                > The hyperbolic distance between a query Q_(b,h,i) and key K_(b,h,j) is computed using the distance function in the Poincare ball model:
+                    d_D( Q_(b,h,i) , K_(b,h,j) ) = cosh^(-1) ( 1 + \frac{2c || Q_(b,h,i) + (-K_(b,h,j)) ||^2 }{ (1 - c|| Q_(b,h,i) ||^2 ) (1 - c|| K_(b,h,j) ||^2 ) + \epsilon}  )
+                > To ensure numerical stability, we clamp the argument of cosh^(-1):
+                    A_(b,h,i,j) = max( above_arg , 1 + \deta )
+                > then distance is computed as:
+                    d_D( Q_(b,h,i), K_(b,h,j) ) = log( A_(b,h,i,j) + sqrt( A_(b,h,i,j)^2 - 1 ) )
+            
+            - Attention Scores and Weights
+                > Using the computed distance, attention scores with a head-specific scaling factor \alpha_h is calculated:
+                    Att_(b,h,i,j) = - \frac{d_D( Q_(b,h,i), K_(b,h,j) )^2 }{ \alpha_h sqrt(D) }, where D is head dimension 
+                > Attention weights are obtained by normalising the scores using the softmax function: 
+                    \alpha_(b,h,i,j) = \frac{ exp(Att_(b,h,i,j)) }{ sum[k=1:N] exp(Att_(b,h,i,k)) }, where N is sequence length 
+            
+            - Output Computation
+                > Each attention head produces an output by aggregating the value vectors, weighted by the attention weights:
+                    O_(b,h,i) = Mob_sum[j=1,N]( mob_mult( \alpha_(b,h,i,j), V_(b,h,i,j) ) ), where N is seq length (note: * and mob_mult is used inter-changably by mood lol)
+
+                > The outputs from all heas are combined using Mobius Concatenation and transformed with a final linear layer:
+                    O_(b,i) = mv_mult( W_O, Mob_sum[h=1:H](O_(b,h,i)) ) mob_add b_O, where H is the number of attention heads (note: + and mob_add is used inter-changably by mood lol)
+                
+                > DropConnect regularisation is applied to the attention weights during training with probability p [Wan 2013 to know more]
+            
+            - Residual Connection with Layer Scaling 
+                > As in the Hyperbolic Linear Layer, residual connections with a learnable scaling parameter \beta is used 
+                    X' = X + \beta * O 
+
+        3: Hyperbolic Feed-Forward Network 
+            - FF network in hyperbolic space consists of 2 hyperbolic linear layers with a hyperbolic ReLU activation in between:
+                H_1 = mv_mult(X', w_1) \mob_add b_1
+                H_2 = ReLU^D(H_1)
+                H_3 = mv_mult(H_2, w_2) \mob_add b_2
+            - This is then followed by a residual connection and hyperbolic layer normalisation:
+                X'' = LayerNorm^D(X' \mob_add \beta \mob_mult H_3 )
+
+    - Optimising in Hyperbolic Space 
+        > Optimising NN in hyperbolic space presents unique challenges due to its non-euc nature 
+        > Several techniquees is employed to ensure stable and effective training 
+        
+        1: Gradient clipping
+            > This is done to preven large gradients from destabilising training (better way to do this? probably not)
+            > Gradient is clipped in the tangent space 
+                grad_clipped = grad_\theta (if || grad_\theta || <= v) else v \dot_product \frac{grad_\theta}{ || grad_\theta|| } 
+                    * ||.|| is euc-norm is tangent space and v is clipping threshold 
+        
+        2: Riemannian Adam Optimiser
+            > We utilise the Riemannian Adam optimiser (an Adam optimiser that is adapted for Riemennian manifolds)
+            > Update rule:
+                \theta_(t+1) = exp_{\theta_t}(-\miniscule_t \dot_product  \fraction{ m_t^{clipped} }{ sqrt(v_t^{clipped}) +\epsilon } )
+                * \miniscule_t is the learning rate 
+                * m_t^{clipped} and v_t^{clipped} are the first and second moment estimates 
+                * exp_{\theta_t}is the exponential map at \theta_t 
+        
+        3: Geodesic Distance Regularisation 
+            > Regularisation term based on geodesic distance is introduced to enchance class separation and encourage meaningful representation 
+            > L_{geo} = \lambda_{reg} \dot_product Expected_(i,j)[ (1 - \delta_(y_i,y_j)) \dot_product d_D(x_i,x_j)]
+                * \delta_(y_i,y_j) is the Kronecker delta function which indicates whether samples i and j belong to the same class 
+                * Total loss objective is L_{cross_entropy} + L_{geo}
+        
+        4: Layer scaling and Attention Scaling 
+            > Introducing learnable scaling parameter \beta in residual connections and head-specific scaling factor \alpha_h in the attention mechanism 
+            helps control the magnitude of the updates
+            > it allows each attention head to adapt its sensitivity to hyperbolic distances 
+        
+        5: Parameter Initialisation 
+            > Weights are initialised using Xavier uniform initialisation for hyperbolic space [Leimeister & Wilson 1029 to know more, not really impt] 
+            > All manifold parameter are initialised within the Poincare ball to ensure valid representation and stable training 
+    
+    - Limitation 
+        > While it gives be better hierarchical data handling, it incurs high computation costs due to complexity of hyperbolic operations 
+            - But enhanced representation capabilities and scalability justify this trade-off 
+            - Better computation equipments in the future can mitigate this too 
+        > Additionally, Mobius op can be approximated to reduce complexity 
+            - maybe can use PCA to reduce the vector dimensions 
+            

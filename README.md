@@ -1,0 +1,1 @@
+Writing in .txt and not .latex bc it takes alot of energy to compile and i can read it pretty much the same 
