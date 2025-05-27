@@ -1,0 +1,3 @@
+An Introduction to Temporal Graphs: An Algorithmic Perspective
+https://www.tandfonline.com/doi/full/10.1080/15427951.2016.1177801
+
