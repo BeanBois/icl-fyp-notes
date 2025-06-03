@@ -70,8 +70,70 @@ Introduction
             * I think this is where i visualise Factor graphs to come in! 
         > Section 9 gives a brief introduction to such models 
         > Section 2 also provides all necessary preliminaries 
-    - Further studies beyond the paper 
+    - Further studies beyond the paper {read if have time} 
         > [33] gives an extensive overview of the literature realted to temporal networks from a diverse range of scientific domains 
-        > 
+        > [32] delves into the development of methods, systems modeled and questions addressed in the priod 2012-2015
+        > Appllications of temporal graph are discussed in [30]
+        > [40] utilises temporal graph to represent real datasets
+            * this papaer shows how various node metrics can be used, and gioves a static representation of a temporal graph {might be important to read this paper}
+        > [17] studies the flooding time (info dissemination) in the following type of edge-Markovian temporal graphs [may be an impt paper for IP too]
+        > [31,68,37] looks at temporal graph generation with a distribution, where graph at every timestep is drawn from said distribution independently at random [impt paper too]
+        > [20,35] looks at a particular model of random temporal graph known as random phonecall model, in which at each nod at each step can communicate with a random neighbor 
+            * might help with better (or more efficient and effective) dissemination of information 
+        > [73, 25] takes the approach of assuming the presence of an edge in a (or several) given time interval [t_s,t_e], not just for discrete steps [ may improve efficiency ]
+            - [39] takes the same approach, but treat travel-times as time-dependent 
+        > [1] studies Dynamic Map Visitation problem, in which a team of agents (if we consider the arm and gripper as cooperating agents) operates in a dynamic env and must 
+        visit a collection of critical location (waypoints in our case) ASAP
+
+Section 2 : Modelling and Basic Properties 
+    - When time is assumed to be DISCRETE, a temporal graph is just a static graph {G = (V, E)} where every edge labeled with 0>= natural numbers 
+        > Labels of edge may be viewed as the times at which the edge is available 
+            - Eg a graph with no labels is never available, whereas an edge with labels of all even natural numbers is available at all even times 
+            - Labels can corr. to any unit of time (hierarchical nature, non-euc methods may be used to better represent these) 
+        * what is we model these labels as a spread of probability over time [multi-gaus] where by P(e|T=t) represent the probability where edge is present (becomes a multi-classification task)
+    - There are several ways of modeling formally discrete temporal graphs 
+        1: consider an underlying static graph G = (V,E) together with a labeling \lambda : E -> 2^N of G assigning every edge a set of natural numbers 
+            > G wrt to \lambda will be \lambda(G)
+            > Useful notation when one wants to explicitly refer to and study properties of the labels of the temporal graph 
+                * Useful for proofs of correctness or O(.) calculation 
+                - Eg:   
+                    a: multiset of all labels of \lambda(G) can be denoted as \lambda(E) 
+                    b: their cardinality defined as |\lambda| = sum[e in E] |\lambda(e)|
+                    c: max, min of labels as \lambda_max = max{l in \lambda(E)} (and v.v for min)
+                    d: lifetime of graph can be defined as \alpha(G) = \lambda_max - \lambda_min + 1 
+        2: we can also take the ordered pair of disjoint sets (V,A) approach s.t A \subset ({V choose 2} x N) for graph or A \subset ({V^2 \ {(u,u) : u in V}} x N) for digraphs 
+            > Set A is known as the set of time-edges and can be used to refer to the structure of the temporal graph at a particular time 
+                - A(t) can denote the set of edges present at time t, and can be used to define the temporal graph at time t, a static graph D(t) = (V,A(t))
+                - Then the temporal graph in this case will be viewed as a sequenceof static graphs (like pseudo-demos and demos in IP)
+        3: take the approach of expanding in time the whole temporal garph and obtain an equivalent static graph without losing any information (then becomes supervised learning)
+            > Reason for doing this is so that static graphs are easier to handle (more techinques available) 
+            > This approch tackles the problem by first doing STATIC EXPANSION on temporal graph to obtain a static graph, then applying existing techniques to analyse them 
+                - Formally, Static Expansion of a temporal graph D = (V,A) is a DAG H = (S,E) which is defined by:
+                    > V = {u_1 ... u_n} -> S = {u_ij : \lambda_min - 1 <= i <= \lambda_max, 1 <= j <= n} and E = {(u_(i-1)j, u_ij') : \lambda_min <= i <= \lambda_max & (u_j, u_j' in A(i))}
+                    > In plain terms, at every discrete time step, we create a copy of V representing the instances of the nodes at time t 
+                        - we may the discrete time steps as levels or rows from top to bottom, with every level containing a copy of V
+                    > Then outgoing edges are added from time-nodes of one level to time-nodes of the level below it (to rep the linear temporal nature ,theres a word for this in graph theory)
+                        - in particular, we connect a time-node u_(i-1)j to its own subsequent copy u_ij and to every time-node u_ij' s.t (u_j,u_j') is an edge of the temporal graph at time i
+                    > Since this construction includes all possible vertical edges from a node to its own subsequent instances, these edges helps nodes 'preserve' their own history in time, 
+                    modelling its reflective temporal r/s (actions in IP)
+    - Journeys 
+        > Joruney in a temporal graph  can be thought of a redefinition of Paths in static graph 
+        > A temporal walk W of a temporal graph D = (V,A) is an alternating sequence of nodes and times (u_1,t_1 ... u_k-1, t_k-1, u_k) where ((u_i, u_i+1), t_i) in A, for all 
+        > 1 <= i <= k-1, and t_i < t_i+1 for all 1<= i <= k-2
+            - we call t_k-1 - t_1 + 1 the duration of the walk W, t_1 its departure time and t_k-1 its arrival time 
+        > A Journey (or temporal/time-respecting path) J is then a temporal walk with pairwise distinct nodes
+            - In plain words, a journey of D is a path of the underlying static graph of D that uses strictly increasing edge-labels
+        > Foremost Journey
+            - A u-v journey J is called FOREMOST from time t in N if it departs after time t and its arrival time is minimised 
+        > Temporal Distance
+            - The temporal distance from a node u at time t to a node v is defined as the duration of a foremost u-v journey from time t 
+        > Temporal Diameter
+            - We say that a temporal graph D = (V,A) has temporal (or dynamic) diameter d, if d is the minimum integer for which it holds that the  
+            temporal distance from every time-node (u,t) in V x {0, 1, ... \alpha - d} to every node v in V is at most d 
+        
+
+            
+
+
 
         
