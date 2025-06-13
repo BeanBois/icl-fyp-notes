@@ -316,7 +316,7 @@ Implementation Details
 		- for gripper state canges, this is done easily since they are expressed as binary states {0,1}
 		- we dont normalise the position of the point cloud observation but rather rely on the sine/cosine embeddings, a strategy found be to sufficient 
 	> Point Cloud Representation 
-		- segmented point cloud observations og object of interest in env as observations 
+		- segmented point cloud observations of object of interest in env as observations 
 		- those segmented point clouds dont include points on the robot or other static objects such as the table or distractors 
 		- in practice, point clouds are downsampled to contain 2048 points and they are expressed in the end-effector frame as T_ew x P to achieve stronger spatial generalisation capabilities 
 		- point clouds are then processed with a geometry encoder producing M=16 nodes used to construct our devised graph representation 

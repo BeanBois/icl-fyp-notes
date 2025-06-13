@@ -130,6 +130,226 @@ Section 2 : Modelling and Basic Properties
         > Temporal Diameter
             - We say that a temporal graph D = (V,A) has temporal (or dynamic) diameter d, if d is the minimum integer for which it holds that the  
             temporal distance from every time-node (u,t) in V x {0, 1, ... \alpha - d} to every node v in V is at most d 
+        > Foremost Journey has the property that it can be computed efficiently
+            - There exists an algorithm that given some source node s and a time t_start, computes for all other nodes w a foremost s-w journey from time t_start [49,50]
+            - Runtime for this algorithm is O(n \alpha^3(\lambda) + |\lambda|), where n denotes the number of nodes
+            - Algorithm takes as input the whole temporal graph D 
+                > Such algorithm are known as offline algorithm, compared to online algorithm where temporal graph is revealed on the fly 
+                > This algorithm is essentially a temporal translation of the BFS algorithm with path length replaced by path arrival time 
+                    - for every time t, the algorithm picks, one after another, all nodes that have been already reached (initially only source node s) and inspect all edges that are incident to that 
+                    node at time T
+                    - if a time-edge (e,t) leads to a node w that has not yet been reached, then (e,t) is picked as an edge of a foremost journey from the source to w
+                    - This algorithm is correct for the same reason that BFS is correct
+                > An easy way to see why the algoritm is correct is seen by considering a static expansion of a temporal graph
+                    - Algorithm begins from the upper copy (level 0) of the source in the static expansion and essentially executes the slight variation of BFS
+                    - At iteration i+1, given the set R of already reached nodes at level i, the algorithm first follows all vertical edges leaving R in order to reach in one step the (i+1)th copy
+                    of each node i
+                    - Then it insects all diagonal edges leaving R to discover new reachabilities by which it first reached the column of u 
+                        * vertical edges are interpreted as waiting on the corresponding node 
+                    - The above algorithm computes a shortest path to each column of the static expansion
+                    - Correctness follows from the fact that shortest paths to columns are equivalent to foremost journeys to nodes corresponding to the columns 
+
+Section 3 : Connectivity and Menger's theorem
+    - Menger's Theorem
+        > Assume that we are given a static graph G and a source node s and a sink node z of G.
+        > 2 paths from s to z are called node-disjoint if they have only the nodes s and z in common 
+        > Menger's theorem (AKA max-flow min-cut theorem for undirected graphs), states that the max number of node-disjoint s-z paths is equal to the minimum number of nodes that must be removed
+        in order ti separate s from z (can be used to classify point clouds icl)
+    - This fundamental theorem is violated in temporal graphs if we keep its original formulation and want it to hold for journeys instead of paths 
+        > violation even holds for extreme cases of temporal graphs known as single-labeled temporal graphs, where every edge has at most 1 label
+            - even for such graphs, the max number of node-disjoint journeys from s to z ca be strictly fewer than the min number of nodes whose deletion leaves no s-z journey 
+            - To generalise from example given in paper, for every single-labeled graph with 2k - 1 inner nodes where 
+                1) every s-z journey visits at least k of these nodes, ensuring again that there are no two-node-disjoint journeys 
+                2) there is a journey through any set of k inner nodes, ensuring that every s-z separator must have size at least k
+    - However, if node-disjoint is replaced with edge-disjointness and node-removal by edge removal, violation does not hold 
+        > in particular [9] proves that for single-labeled temporal graphs, the max number of edge-disjoint journeys from s to z is equal to the minumum number of edges whose deletion leaves no s-z journey.
+        > In lay-man term, the max-flow min-cut theorem holds for unit capacities for journeys in single-labeled temporal graphs 
+        > We can construct such an example, which is an ad hoc static expansion for the special case of single-labeled temporal graphs:
+            - Let G = (V,E) be the underlying graph of an undirected single-labeled temporal graph
+            - We then construct a labeled directed graph G' = (V',E') as follows:
+                > For every (u,v) in E' we add in the graph 2 new nodes x and y; and the undirected edges (u,x), (v,x), (y,u), (y,v) and (x,y)
+                > Then we relax all labels required so that there is sufficient "room" (wrt time) to introduce (by labelling new edges) both a (u,x,y,v) and (v,x,y,u) journey
+                > The goal is to journey both from u to v and from v to u in G'   
+                    - Easy way to do this is as follows:
+                    1: if t is label of (u,v) we can label t.1 : (u,x), t.2 : (x,y), t.3 : (y,v) s.t t.1 < t.2 < t.3 
+                    2: The same is done for (v,x), (x,y), (y,u)
+                    3: Then construct a static directed graph G'' = (V'', E'')  as follows:
+                        a: for every node in V, let y1,y2 ... yi, ... be its incoming edges and x1,x2 ... xj, ... be its outgoing edges 
+                        * we only want to preserve the time-respecting y,u,x traversals, so:
+                            b.1: for each (yi,u) edges, we introduce a node wi and the edge (yi,wi) 
+                            b.2: for each (u,xj) edges, we introduce a node vj and the edge (vj,xj)
+                        c: then we introuce edge (wi,vj) iff (yi,u) and (u,xj) is time respecting
+                    * This reduction preserves edge-disjointness and sizes of edge separators, and if a super source and sink is added to G'', the 
+                    max-flow min-cut theorem for static directed graph yields the aforementioned result 
+        > Furthermore, reachability in G under journeys corresponding to (path) reachability in G'', so we can use BFS on G'' to answer questions about
+        foremost journeys in G 
+    
+    - Additionally, if one reformulate Menger's theorem in a way that takes time into account, a very natural temporal analogue of Menger's theorem is
+    obtained, which is valid for all (multi-labeled) temporal networks
+        * The idea is to replace in the formulation of node-disjointess by node departure time disjointeness (or out-disjointness)  
+            - 2 journeys are out-disjoint if they never leave from the same node at the same time 
+        * And replace node removals by node departure time removals
+        > When we say that we remove node departure time (u,t), we mean that we remove all edges leaving u at time t 
+            * we remove label t from all (u,v) edges for all  v in V 
+        * Question becomes : "How many node departure times are needed to separate 2 nodes s and z"
+            > essentially we are asking how many node departure times must be selected so that after the removal of all the corresponding time-edges 
+            the resulting temporal graph has no s-z journey 
+            * This is different from the qn of how many time0edges mustbe removed (this does not lead to Temporal Menger's)
+
+    - Menger's Temporal Analogue: Take any temporal graph \lambda(G), where G = (V,E), with 2 distinguished nodes s and z. Max number of out-disjoint 
+    journeys from s to z is equal to the minimum number of node departure times needed to separate s and z 
+    * Notation : uij, i tracks the temporal r/s while j tracks index of node
+        > The idea is to take the static expansion H = (S,A) of \lambda(G) and for each time-node uij, with at least 2 outgoing edges to nodes different 
+        than u(i+1)j, add a new node wij and the edges (uij,wij) and (wij,u(i+1)j1),  (wij,u(i+1)j2) ... (wij,u(i+1)jk). 
+            * here [1:k] is the number of nodes that uij is connected to 
+        > Then define an edge capacity function c : A -> {1, \lambda_max} as follows:
+            edges (uij,u(i+1)j) take capacity \lambda_max and all other edges take capacity 1 
+        > The theorem follows 
+            - by observing that the maximum u01 -> u(\lambda_max,n) flow is equal to the minimum of the capacity of a u01 -> u(\lambda_max,n) cut,
+            - the maximum number of out-disjoint journeys from s to z is equal to the maximum u01 -> u(\lambda_max,n) flow, and  
+            - the minimum number of node departure times needed to separate s from z is equal to the minimum of the capacity of a u01 -> u(\lambda_max,n) cut
+    * Figure 3 in paper illustrates this very well 
+
+Section 4: Dissemination and Gathering of information
+    - Usually the goal is to transmit some infromation to every participant of the system, while minimizing some measure of communication or time 
+    - Context: 
+        > There are n nodes, and they communicate with other nodes in discrete rounds by interchanging messages
+        > In every round, an adversary scheduler selects a set of edges between nodes and every node may communicate with its current neighbor. 
+        as selected by the scheduler (usually done by bradocasting a single message to be delivered to all its neighbours)
+            - So the dynaminc topology behaves as a discrete temporal graph, where the ith instance of the graph is the topology selected by the scheduler
+            in round i
+        > The main difference (compared to previous setting) is that now the topology is revealed to the algorithms in an online and a totally unpredictable
+        way 
+        > An interesting special case of temporal graphs consists of those temporal graphs that have connected instsances 
+            - A temporal graph D is called continuously connected if D(t) is connected for all times t >= 1
+            - These temporal graph have useful properties concerning the information propagation in a distributed setting 
+                > If all nodes broadcast in every round all information that they have heard so far, then in every round at least 1 or more node learns
+                something new, which implies that a piece of information can be in principle disseminated in at most n-1 rounds 
+    - The problem of information dissemination becomes more interesting if we dont allow nodes to transmit an unlimited amount of information in every 
+    round, that is we restrict the size of messages that they can transmit 
+        > This is known as the k-token dissemination problem 
+        > There is a domain of tokens T, and each node is assigned a subset of the tokens, and a total of k distinct tokens is assigned to the nodes 
+        > The goal is for an algorithm to organise the communication between the nodes in such a way that under any dynamic topology, each node eventually
+        terminates and outputs all k tokens 
+        > The focus here is on token-forwarding algorithms
+            - Such algorithms is quite restricted in that, in every round r and for every node u, it picks only a single token from those already known
+            by u (or an empty token), and this token will be delivered to all the current neighbours of u by a single broadcast
+            - Token-Forwarding algorithms are simple, easy to implement, typically incur low overhead, and have been extensively studied in static networks
+            - There is lower bound on the number of rounds for token dissemination that holds even for centralised token forwarding algorithms [46]
+                > Such centralised algorithms are allowed to see and remember the whole state and history of the entire network, but they have to make
+                their selection of tokens (to be forwarded) without knowing what topology will be scheduled by the adversary in the current round 
+                    - So a token is seletected by algorithm, then scehduler reveals the topology, taking into account the algorithm's selection 
+            - For simplicity, it may be assumed that each of the k tokens is assigned initially to exactly 1 node 
+                > Theorem on Lower Bound:
+                    Any deterministic centralised algorithm for k-token dissemination in continuously connected temporal graphs requires at least
+                    \omega(nlogk) rounds to complete in the worst case 
+                    - The idea behind the proof is to define a potential function that charges by 1/(k-i) for the ith token learned by each node
+                        > so the first token learned by a node comes at a cheap price of 1/k, while the last token learnt costs 1 
+                        > The initial total potential is 1 as k nodes have obtained their first token each (1/k * k =1)
+                        > The final potential (when all nodes learnt all k tokens) is n * H_k = \theta(n logk)
+                        > Then it suffices to present an adversarial schedule (i.e a continuously connected temporal graph) that forces any algorithm
+                        to achieve in every round at most a bounded increase in potential 
+                        > The topology of a round can be summarised as follow:
+                            1) Select all edges that contribute no cost (free edges)
+                                * a edge is free if the token transmitted by u is already known by v and v.v 
+                            2) The free edges partitions the nods into l components C1,C2 ..Cl 
+                            3) We pick a represntative vi from each component Ci 
+                            4) Then construct a connected graph over vi - s 
+                                * An observation is that each vi transmits a distinct token ti, otherwise at least 2 of them should have been connected by
+                                a free edge (bc 2 nodes interchanging the same token cant learn anything new)
+                                * The idea is to further partition the representatives into a small set of nodes that know many tokens each and a large 
+                                set of nodes that know few tokens each 
+                                * We call nodes that know many tokens expensive as according to the aforementioned potential function, a new token 
+                                at a node that already knows many tokens comes at a high price
+                                    - In particular, a node is expensive if it is missing at most l/6 tokens (l being num of components)
+                                * likewise we call nodes that know few tokens cheap 
+                                    - In particular, a node is cheap if it is missing at least l/6 tokens (l being num of components)
+                                    - Roughly a cheap node learns a new token at the low cost of at most 6/l as the cost of a token is inversely proportional
+                                    to the number of missing tokens before the token's arrival 
+                                4.1) To construct the connected graph first connect the cheap nodes by an arbitary line 
+                                    * Since there are at most l such nodes, and each of them obtains at most 2 new tokens (as it has at most 2 neighbors on 
+                                    the line and each node transmit a single token), the total cost of this component is at most 12 (bounded as desired)
+                                4.2) It remains to connect the expensive nodes
+                                    * It can be shown that there is a way to match each expensive node to a distinct cheap node (i.e by constructing a match
+                                    between the expensive and cheap nodes), so that no expensive node learns a new token 
+                                    * Thus the only additional cost is that of the new tokens that cheap nodes obtain from expensive nodes 
+                                    * This additional cost is roughly at most 6, so the total cost have been shown to be bounded by a small constant as required
+                                    * [42] also proposes a simple distributed algorithm for k-token dissemination that needs O(nk) rounds in the worst case to deliver all token
+    - The mentioned lower bound can be further improved by exploiting the probabilistic method [21]
+        * In particular, it can be shown that any randomized token-forwarding algorithm (centralised or distributed) for k-token dissemination needs \omega(nk/log(n)) rounds
+        > This lower bound is within a logarithmic factor of the O(nk) upper bound
+        > The interesting machinery used to establish the lower bound is in the analysis 
+        > Since all representatives of the connected components formed by the free edges are connected arbitarily by a line, the idea is to first prove that bound w.h.p over
+        an initial token distribution, in which each of the nodes receives each of the k tokens independently with probability 3/4 
+        > It can be shown in this case that, w.h.p. over the initial assignment of tokens, in every round there are at most O(log n) new token deliveries and an overall of 
+        \omega(nk) new token deliveries must occur for the protocol to complete.
+        > Finally it can be shown via probabilistic method that any initial token distribution can be reduced to the above distribution for which the bound holds 
+            * The above lower bounding technique, based on the probabilistic method, was applied in [28] to several variations of k-token dissemination. 
+            * For example, if the nodes are allowed to transmit b ≤ k tokens instead of only one token in every round, then it can be proved that any randomized token-forwarding algorithm 
+            requires \omega(n + nk/(b2 log nlog log n)) rounds.
+    - In [21], offline (whole dynamic topology knwon in advance) token forwarding algorithms were also designed 
+        > One problem that was studied was the Gathering problem 
+            *  Gathering Problem : Delivering all tokens to a given sink node z as fast as possible 
+        > A lemma in [21] has a proof that constitutes a nice application of the temporal analogue of Menger's Theorem
+        > Lemma : Let there be k <= n tokens at given source nodes and let z be an arbitary node. Then if temporal graph D is continuously connected, all the tokens can be delivereed to z 
+        using local broadcast, in O(n) rounds 
+        > Proof: Let S = {s1, s2 ... sh} be the set of source nodes, let N(si) be the number of tokens of source node si and let the age of temporal graph be n + k = O(n)
+            - it suffice to prove that there are at least k out-disjoint journeys from S to any given z, such that N(si) of these journeys leave from each source node si 
+                > To show the existence of k out-disjoint journeys, we create a supersource node s and connect it to the source node with token i by an edge labeled i
+                    * This is assuming that an arbitary ordering of the tokens from 1 to k 
+                > Then we shift the rest of the temporal graph in time by increasing all other edge labels by k 
+                > The new temporal graph D' has asymptotically the same age as D, and all properties have been preserved 
+                > Now it suffices to show that there are at least k out-disjoint journeys from s to z, as the k edges of s respect the N(si)'s
+                > Due to temporal Menger's, it is equivalent to show that at least k departure times must be removed to separate s from z 
+                > Indeed, any removal of fewer than k departure times must leave at least n rounds, during which all departure times are available
+                    * This is due to the shifting by k, by which the age of D' is now n + 2k
+                > As D is connected in every round (continuously connected), n rounds guarantee the existence of a journey from s to z  
+            - Then, all tokens can be forwarded in parallel, each on one of these journeys, w/o conflicting with each other in an outgoing transmission 
+            - Also because the age of D is O(n), they all arrive at z in O(n) rounds 
+                                        
+>>>>>>>
+>
+                                
+Section 5 : Instantaneuos Vs Global Properties
+
+
+
+    
+
+Section 9 : Random Temporal Graph 
+    - Consider the case in which each edge (of an underlying clique) just picks independently and uniformly at random a single time-label from [r] = {1,2 ... r}
+        > So each edge get labeled t in [r] with probability r^-1 
+    - [2] is also a paper that studies this (read this!)
+    - First calculate the probability that given a specific path (u1, u2 ... uk+1) of length k, a journey appears on this path 
+        > Begin with the directed case 
+            - First lets try to obtain a weak but elegant upper nound 
+                1) Partition [r] into R1 = {1, ... r//2 } and R2 = {r//2 + 1 ... r}
+                    > P(journey) <= P(no R2R1 occurs) as any journey assignment cannot have 2 consectuive selections s.t the first one is from R2 and the second if from R1 (this breaks temporal constraints)
+                    > So it suffice to calcualte P(no R2R1 occurs)
+                        * Notice that the assignments in which no R2R1 occurs are of the form (R1)^i(R2)^j for i + j = k and there are k+1 of them 
+                        * In contrast, all possible assignments are 2^k corresponding to all possible ways to choose k times with reptition from {R1, R2}
+                        - So, P(no R2R1 ocurs) = k / 2^k and we conclude that P(journey) <= k/2^k which is independenrt of r (the set of labels)
+    - For any specific arrangments of labels t1, t2 ... tk of this path, where t in [r], the probability that this specific assigement occurs is simply p^k
+        > Since all possible assignments are equiproabable, we get P(journey) = num strictly increasing assigement / num of all possible assigement = rCk/r^k 
+            * rCk = r choose k 
+            * rCk follows from the fact that any strictly increasing assignment is just a unique selection of k labels from the r available, and anu such selection corresponds to a 
+            unique strictly increasing assignment 
+    - Now, it is easy to compute the expected number of journeys of length k.
+        > Let S be the set of all directed paths of length k and let Y_p be an indicator random variable which is 1 if a journey appears on a specific p in S and 0 otherwise 
+        > Let also X_k be a random variable giving the number of journeys of length k 
+        > Clearly, E[X_k] = E[ sum[p in S] Y_p ] = sum[p in S] E[Y_p] = |S| * P(a journey appears on a specific path of length k) = n(n-1) ... (n-k) * rCk r^-k >= (n-k)^k rCk r^-k 
+        > Now, if we set n >= r/rCk ^ (1/k) + k, we get E[X] >= 1
+        > A simpler, but weaker, formula can be obtained by requiring n >= r + k
+            - In this case we get E[X] >= rCk
+            - For example, a long journey (high k) of size k = n/2 that uses all available labels is expected to appear, provided that n >= 2r (to see this, set k = r)
+
+    - Now we try to obtain bounds on the probability that a journey of length k appears on a random temporal graph
+        > Let us begin from a simple case, namely the one in which k = 4, that is, we want to calculate the probability that a journey of length 4 appears 
+        
+
+    
+
+
         
 
             

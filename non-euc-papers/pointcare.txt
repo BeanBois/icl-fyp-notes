@@ -1,1 +1,32 @@
 Poincaré Embeddings for Learning Hierarchical Representations
+
+Abstract 
+    - Representation learning has become an invaluable approach for learning from symbolic data such as text and graphs 
+    - However, while complex symbolic datasets often exhibits a latent hierarchical structure, SOTA methods typically learn embeddings in Euclidean vector 
+    spaces, which do not account for this property 
+    - For this purpose, we introduce a new apporach for learning hierachical representations of symbolic data by embedding them into hyperbolic space 
+        > More precisely we embed them into n-dim Poincare ball 
+        > Due to underlying geometry, this allows us to learn parsimonious representations of symbolic data by simultaneously capturing hierachy and 
+        similarity 
+    - We introduce an efficient algorithm to learn the embeddings based on Riemannian optimisation and show experimentally that Poincare embeddings 
+    outperform Euclidean embeddings significantly on data with latent hierachies, both in terms of representation capacities and in terms of 
+    generalisation ability 
+
+Introduction
+    - Learning representations of symbolic data (like text, graphs and multi-relational data) has become a central paradigm in machine learning and AI
+    - Typically, the objective of embedding methods is to organise symbolic objects in a way such that their similarity in the embedding space reflect
+    their semantic or functional similarity 
+        > For this purpose, the similarity of objects is usually measured either by their distance or by their inner product in the embedding space 
+        > For instance, [17] embed words in R^d such that their inner product is maximised when words co-occur within similar contexts in text corpora
+            - This is motivated by the distributional hypothesis [12,9] where the meaning of words can be derived from the contexts in which they appear
+        > More methods have been used, and they reflect the homophily propertty found in many real-world networks (ie similar actors tend to associate with each other)
+    - Although embedding methods have proven successful in numerous applications, they suffer from a fundemental limitation:
+        > Their ability to model complex patterns is inherently bounded by the dimensionality of the embedding space 
+        > For eg [20] showed that linear embeddings of graph can require a prohibitively large dimenstionality to model certain types of relations 
+    - Although non-linear embeddings can mitigate this problem [7], complex graph patterns can still require a computationally infeasible embedding 
+    dimensionality 
+        > As a consequence, no method yet exists that is able to compute embeddings of large graph-structured data (like social networks) without loss 
+        of information 
+        > Since the ability to express information is a precondition for learning and generalisation, it is therefore important to increase the representation 
+        capacity of embedding methods such that they can be realistically used to model complex patterns on a large scale 
+        
